@@ -85,11 +85,30 @@ reroll the groove under your hands. `Session.seed(_:)` picks the take.
 
 ## Using it
 
-Add the package as a dependency and depend on its `MidiDSL` library product.
-It builds in Swift 5 language mode.
+Add the package to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/Enie/MidiDSL.git", from: "0.1.0"),
+],
+targets: [
+    .target(name: "MyTarget", dependencies: [
+        .product(name: "MidiDSL", package: "MidiDSL"),
+    ]),
+]
+```
+
+or in Xcode, File ▸ Add Package Dependencies… with the same URL.
+
+It needs Swift 6 tools and macOS 13 or later, and builds in Swift 5 language
+mode. Until 1.0, a minor version may change the API.
 
 ## Tests
 
 ```bash
 swift test
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
