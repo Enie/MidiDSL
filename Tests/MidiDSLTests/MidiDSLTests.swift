@@ -1175,7 +1175,7 @@ class BarNotationTests: XCTestCase {
     }
 
     func testBarNotationChordQuality() {
-        let section = Section { "Dm7 | G7 | Cmaj7" }
+        let section = Section { "Dm7 | Gdom7 | Cmaj7" }
         XCTAssertEqual(section.notes.count, 12)
         let bar2Notes = section.notes.filter { $0.startTime == 1.0 }.compactMap { $0.pitch }.sorted()
         XCTAssertEqual(bar2Notes, [67, 71, 74, 77])
@@ -1815,14 +1815,31 @@ class DominantNotationTests: XCTestCase {
                        "Gdom7 should sound G B D F in the second bar")
     }
 
-    func testUnprefixedG7DivergenceUnchanged() {
+    func testBareG7IsThePitchInEveryMode() {
         let inline = SectionBuilder.parseNotation("G7 E")
-        XCTAssertEqual(inline.first?.pitch, 91, "inline G7 stays the pitch G octave 7")
+        XCTAssertEqual(inline.first?.pitch, 91, "inline G7 is the pitch G octave 7")
 
         let bar = SectionBuilder.parseNotation("G7 | Cmaj7")
         let bar1 = bar.filter { $0.startTime < 1.0 }
-        XCTAssertEqual(Set(bar1.compactMap { $0.pitch.map { Int($0) % 12 } }), Set([7, 11, 2, 5]),
-                       "bar-mode G7 stays G dominant 7")
+        XCTAssertEqual(bar1.compactMap { $0.pitch }, [91], "bar-mode G7 is the pitch G octave 7")
+
+        let flat = SectionBuilder.parseNotation("Bb7 | Cmaj7").filter { $0.startTime < 1.0 }
+        XCTAssertEqual(flat.compactMap { $0.pitch }, [94], "Bb7 is the pitch B-flat octave 7")
+    }
+
+    func testBareC7InAStackIsThePitch() {
+        for expr in ["[C7 E]", "[C7 E] | Cmaj7"] {
+            let stack = SectionBuilder.parseNotation(expr).filter { $0.startTime == 0.0 }
+            XCTAssertEqual(Set(stack.compactMap { $0.pitch }), Set([84, 64]), "for '\(expr)'")
+        }
+        let single = SectionBuilder.parseNotation("[C7] | Cmaj7").filter { $0.startTime < 1.0 }
+        XCTAssertEqual(single.compactMap { $0.pitch }, [84])
+    }
+
+    func testAlteredSevenStaysAChord() {
+        let bar1 = SectionBuilder.parseNotation("G7b9 | Cmaj7").filter { $0.startTime < 1.0 }
+        XCTAssertEqual(Set(bar1.compactMap { $0.pitch.map { Int($0) % 12 } }), Set([7, 11, 2, 5, 8]),
+                       "G7b9 spells no pitch, so it is still G dominant 7 flat 9")
     }
 
     func testApostropheForcesPitchInBarMode() {
@@ -1871,7 +1888,7 @@ class DominantNotationTests: XCTestCase {
     }
 
     func testChordBracketWithForcedPitchElement() {
-        let notes = SectionBuilder.parseNotation("[C7 'G8] | Cmaj7")
+        let notes = SectionBuilder.parseNotation("[Cdom7 'G8] | Cmaj7")
         let bar1 = notes.filter { $0.startTime < 1.0 }
         XCTAssertEqual(Set(bar1.compactMap { $0.pitch }), Set([60, 64, 67, 70, 103]))
     }
@@ -2672,6 +2689,19 @@ class AudioUnitPatchTests: XCTestCase {
         let data = try JSONSerialization.data(withJSONObject: json)
         let decoded = try JSONDecoder().decode(SynthPatch.self, from: data)
         XCTAssertNil(decoded.audioUnit)
+    }
+
+    func testEffectsChainInTheOrderWritten() throws {
+        let patch = Synth.audioUnit("Voltstring").effect("Amp", preset: "Crunch").effect("AUDelay").build()
+        XCTAssertEqual(patch.effects, [AudioUnitConfig(name: "Amp", preset: "Crunch"), AudioUnitConfig(name: "AUDelay")])
+        XCTAssertNil(Synth.audioUnit("Voltstring").build().effects)
+        XCTAssertEqual(try JSONDecoder().decode(SynthPatch.self, from: JSONEncoder().encode(patch)), patch)
+    }
+
+    func testAnEffectChangeBreaksPatchEquality() {
+        let plain = Synth.audioUnit("a").build()
+        XCTAssertNotEqual(plain, Synth.audioUnit("a").effect("x").build())
+        XCTAssertNotEqual(Synth.audioUnit("a").effect("x").build(), Synth.audioUnit("a").effect("x", preset: "p").build())
     }
 
     func testAudioUnitChangeBreaksPatchEquality() {
@@ -4356,6 +4386,41 @@ class AutomationTests: XCTestCase {
                        "section-relative, like every other lane the player reads")
         XCTAssertNil(track.sections[0].notes.first?.automation,
                      "a track parameter is not per-voice and must not ride the notes")
+    }
+
+    func testAnEffectParameterIsTrackWideAndCutIntoTheSectionsWindows() {
+        let mix = AutomationTarget.effect("Raum", parameter: "Mix")
+        let track = Track(name: "t") {
+            Section { "| 1 3 5 5 |" }
+            Section { "| 5 3 2 1 |" }
+        }.automate(mix, bars: [0: 0, 1: 0.5], curve: .hold)
+
+        XCTAssertFalse(mix.isPerVoice)
+        XCTAssertNil(track.sections[0].notes.first?.automation,
+                     "an effect sits after the voices — it cannot ride a note")
+        XCTAssertEqual(track.sections[0].automation?.first?.target, mix)
+        XCTAssertEqual(track.sections[0].automation?.first?.value(at: 0.5) ?? -1, 0, accuracy: 1e-9)
+        XCTAssertEqual(track.sections[1].automation?.first?.value(at: 0.5) ?? -1, 0.5, accuracy: 1e-9)
+    }
+
+    func testAnEffectParameterIsHeldToTheNormalizedRange() {
+        let curve = AutomationCurve.make(.effect("Raum", parameter: "Mix"), [0: -1, 1: 40], timeScale: 1)
+        XCTAssertEqual(curve?.points.map(\.value), [0, 1])
+    }
+
+    func testAnEffectParameterCrossesTheJSONBoundary() throws {
+        let session = Session {
+            Track(name: "t") {
+                Section { "C D E F" }.automate(.effect("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
+            }
+        }
+        let data = try JSONEncoder().encode(session)
+        XCTAssertEqual(try JSONDecoder().decode(Session.self, from: data), session)
+        XCTAssertNotEqual(session, Session {
+            Track(name: "t") {
+                Section { "C D E F" }.automate(.effect("Raum", parameter: "Size"), over: [0: 0, 1: 1])
+            }
+        }, "a different parameter is a different edit")
     }
 
     func testASectionsOwnSweepWinsOverTheTracks() {

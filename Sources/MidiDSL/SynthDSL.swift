@@ -164,6 +164,7 @@ public class SynthPatch: Codable, Equatable {
     public var volume: Float
     public var sampler: SamplerConfig?
     public var audioUnit: AudioUnitConfig?
+    public var effects: [AudioUnitConfig]?
     public var sampleKit: SampleKitConfig?
 
     public init(name: String) {
@@ -191,6 +192,7 @@ public class SynthPatch: Codable, Equatable {
                lhs.volume == rhs.volume &&
                lhs.sampler == rhs.sampler &&
                lhs.audioUnit == rhs.audioUnit &&
+               lhs.effects == rhs.effects &&
                lhs.sampleKit == rhs.sampleKit
     }
 }
@@ -283,6 +285,13 @@ public class Synth {
         if let mix = mix {
             patch.reverb.mix = mix
         }
+        return self
+    }
+
+    /// An installed effect plugin after the instrument. Several run in the order they're written.
+    /// Plays on plugin and sampled tracks; the oscillator engine has no plugin graph to put it in.
+    public func effect(_ name: String, preset: String? = nil) -> Synth {
+        patch.effects = (patch.effects ?? []) + [AudioUnitConfig(name: name, preset: preset)]
         return self
     }
 

@@ -1783,6 +1783,9 @@ public enum SectionBuilder {
 
     private static func parseNamedChord(_ token: String, duration: MusicTimeStamp = 1.0) -> Chord? {
         guard !token.isEmpty else { return nil }
+        // A token that spells a pitch is the pitch, in every mode and position: "C7" is C
+        // octave 7, as "C9", "C6" and "C5" are. The dominant chord is written "Cdom7".
+        guard pitchForNoteName(token) == nil else { return nil }
         let chars: [Character] = Array(token)
         guard "ABCDEFGabcdefg".contains(chars[0]) else { return nil }
         var rootLen = 1
