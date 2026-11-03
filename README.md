@@ -48,13 +48,36 @@ start, duration and velocity, and the line and column it was written at. Pass
 `--session-json <path>` to have it written to a file instead, which leaves
 stdout free for the score's own `print(...)`.
 
+## MIDI files
+
+```bash
+swift run HelloScore --midi hello.mid
+```
+
+writes the piece as a Standard MIDI File, ready for any DAW or notation
+program. From code, any `Session` does the same:
+
+```swift
+try MIDIFile.write(session, to: URL(fileURLWithPath: "piece.mid"))
+let bytes = MIDIFile.data(for: session, loops: 4)
+```
+
+The file is format 1 at 480 ticks per quarter: a conductor track with the tempo
+and meter, then one named track per `Track`, each on its own channel (skipping
+channel 10, the General MIDI drum channel). Every pass is written the way it plays: note sets and dice
+resolved, `.active(...)` gates and shuffled sections applied, mutes and volumes
+honoured. Slides become pitch-bend curves and a `.volume` curve becomes
+expression (CC 11). By default it writes the session's whole form
+(`.loops(n)`, or what the arrangement implies).
+
 ## What it is and is not
 
-MidiDSL **describes** music. It does not make sound: there is no synthesizer,
-no MIDI output and no file writer in this package. What you get is a `Session`
-— `Codable`, `Equatable`, plain data — for a host to play, export or draw.
-Componium, the macOS app this was written for, is one such host; the JSON
-above is the whole interface between them.
+MidiDSL **describes** music. It does not make sound: there is no synthesizer
+and no live MIDI output in this package. What you get is a `Session`
+(`Codable`, `Equatable`, plain data) for a host to play, export or draw, and a
+MIDI file of it if that is all you need. Componium, the macOS app this was
+written for, is one such host; the JSON above is the whole interface between
+them.
 
 It depends on Foundation and nothing else.
 

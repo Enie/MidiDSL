@@ -22,17 +22,35 @@ public enum ScoreRunner {
             }
         }
 
+        let session = build()
+        let jsonPath = path(after: "--session-json", in: arguments)
+
+        if let midiPath = path(after: "--midi", in: arguments) {
+            do {
+                try MIDIFile.write(session, to: URL(fileURLWithPath: midiPath))
+            } catch {
+                FileHandle.standardError.write(Data("could not write \(midiPath): \(error)\n".utf8))
+            }
+            // Asked for a MIDI file and nothing else: leave stdout to the score.
+            guard jsonPath != nil else { return }
+        }
+
         let data: Data
         do {
-            data = try JSONEncoder().encode(build())
+            data = try JSONEncoder().encode(session)
         } catch {
             data = Data("{\"error\": \"\(error)\"}".utf8)
         }
 
-        if let flag = arguments.firstIndex(of: "--session-json"), flag + 1 < arguments.count {
-            try? data.write(to: URL(fileURLWithPath: arguments[flag + 1]))
+        if let jsonPath {
+            try? data.write(to: URL(fileURLWithPath: jsonPath))
         } else {
             FileHandle.standardOutput.write(data)
         }
+    }
+
+    private static func path(after flag: String, in arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 }
