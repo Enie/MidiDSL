@@ -148,11 +148,11 @@ public struct Session: Equatable, Codable, Identifiable {
     public init(@TrackArrayBuilder _ content: () -> [Track]) {
         let outerAdvisories = ScoreAdvisories.collected
         ScoreAdvisories.collected = []
-        SampleKitCollector.reset()
+        TrackKeys.reset()
         let (measured, needsFill) = LoopFill.measure(content)
         if needsFill {
             ScoreAdvisories.collected = []
-            SampleKitCollector.reset()
+            TrackKeys.reset()
             let written = measured.reduce(0.0) { longest, track in
                 max(longest, track.sections.map(\.duration).max() ?? 0)
             }

@@ -71,7 +71,6 @@ Nothing in a score is random in the sense of `Double.random`. Everything left to
 - <doc:ChordsAndVoicings>
 - <doc:ProgressionsAndScales>
 - <doc:Drums>
-- <doc:Samples>
 - <doc:NotInTheGrammar>
 
 ### Sound and Movement

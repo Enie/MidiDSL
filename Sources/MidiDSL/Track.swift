@@ -92,32 +92,11 @@ public struct Track: Equatable, Codable, Identifiable {
         self.init(name: name, content)
     }
 
-    private static func adopting(_ claimed: [Sample], into instrument: Instrument?,
-                                 trackName: String) -> Instrument? {
-        guard !claimed.isEmpty else { return instrument }
-        if let displaced = instrument?.sound?.replacedBySamples {
-            ScoreAdvisories.note(SessionAdvisory(message:
-                "Track \"\(trackName)\" plays samples, so its \(displaced) is not "
-                + "sounding — a track has one instrument. Put the samples on a track of "
-                + "their own, or write the other sound's pieces as slices too."))
-        }
-        var adopted = instrument ?? Instrument(name: "kit")
-        let existing = adopted.sampleKit
-        adopted.sampleKit = SampleKitConfig(
-            slices: existing?.slices ?? [],
-            baseKey: existing?.baseKey ?? 36,
-            chromatic: existing?.chromatic ?? false,
-            rootKey: existing?.rootKey ?? 48,
-            laneSlices: claimed,
-            laneBaseKey: existing?.laneBaseKey ?? SampleKitConfig.laneBase)
-        return adopted
-    }
-
     @_documentation(visibility: internal)
     public init(name: String, @SectionArrayBuilder _ content: () -> [Section]) {
         self.name = name
         self.sections = content()
-        self.instrument = Track.adopting(SampleKitCollector.drain(), into: nil, trackName: name)
+        self.instrument = TrackKeys.adopt(into: nil, track: name)
         self.volume = nil
         self.activity = nil
         self.sectionOrder = nil
@@ -135,7 +114,7 @@ public struct Track: Equatable, Codable, Identifiable {
                 @SectionArrayBuilder _ content: () -> [Section]) {
         self.name = name
         self.sections = content()
-        self.instrument = Track.adopting(SampleKitCollector.drain(), into: instrument, trackName: name)
+        self.instrument = TrackKeys.adopt(into: instrument, track: name)
         self.volume = nil
         self.activity = nil
         self.sectionOrder = nil

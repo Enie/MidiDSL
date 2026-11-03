@@ -28,10 +28,11 @@ public struct SessionAdvisory: Equatable, Codable {
     }
 }
 
-enum ScoreAdvisories {
+@_documentation(visibility: internal)
+public enum ScoreAdvisories {
     nonisolated(unsafe) public static var collected: [SessionAdvisory] = []
 
-    static func note(_ advisory: SessionAdvisory) {
+    public static func note(_ advisory: SessionAdvisory) {
         guard !collected.contains(advisory) else { return }
         collected.append(advisory)
     }

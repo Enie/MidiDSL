@@ -38,13 +38,11 @@ final class InstrumentTests: XCTestCase {
     private struct Tone: HostSound, Equatable {
         static let kind = "test.tone"
         var waveform: String
-        var replacedBySamples: String? { nil }
     }
 
     private struct Plugin: HostSound, Equatable {
         static let kind = "test.plugin"
         var name: String
-        var replacedBySamples: String? { "plugin" }
     }
 
     func testAHostSoundIsReadBackByAReaderThatKnowsIt() throws {
@@ -71,31 +69,76 @@ final class InstrumentTests: XCTestCase {
                        Instrument(name: "a", sound: Tone(waveform: "saw")))
     }
 
-    // MARK: - Samples on a track
+    // MARK: - Sounds on keys of their own
+
+    private struct Hit: KeyedSound, Equatable, NoteSource {
+        var file: String
+        var keyName: String { file }
+        static func adopt(_ claims: [KeyedClaim], into instrument: Instrument?, track: String) -> Instrument? {
+            var adopted = instrument ?? Instrument("kit")
+            adopted.name += "+" + claims.map { "\($0.key):\(($0.sound as! Hit).file)" }.joined(separator: ",")
+            return adopted
+        }
+        func notes() -> [Note] {
+            [Note(pitch: TrackKeys.claim(self), velocity: DrumLane.hitVelocity, startTime: 0, duration: 0.25)]
+        }
+    }
 
     override func setUp() {
         super.setUp()
-        SampleKitCollector.reset()
+        TrackKeys.reset()
         ScoreAdvisories.collected = []
     }
 
-    func testSamplesJoinTheTracksInstrumentAndKeepItsProgram() {
-        let track = Track("t", instrument: .generalMIDI(33)) { Section { Sample("hit.wav") } }
-        XCTAssertEqual(track.instrument?.program, 33)
-        XCTAssertEqual(track.instrument?.sampleKit?.laneSlices, [Sample("hit.wav")])
+    func testAHostStatementBecomesStampedNotes() {
+        let section = Section { Hit(file: "a.wav") }
+        XCTAssertEqual(section.notes.first?.pitch, TrackKeys.firstKey)
+        XCTAssertNotNil(section.notes.first?.sourceLine)
     }
 
-    func testSamplesThatReplaceTheSoundSaySo() {
-        _ = Track("t", instrument: Instrument(name: "amp", sound: Plugin(name: "amp"))) {
-            Section { Sample("hit.wav") }
+    func testEachDistinctSoundClaimsTheNextKeyAndTheSameOneKeepsIt() {
+        let track = Track("t") {
+            Section { Hit(file: "a.wav"); Hit(file: "b.wav"); Hit(file: "a.wav") }
         }
-        XCTAssertEqual(ScoreAdvisories.collected.count, 1)
-        XCTAssertTrue(ScoreAdvisories.collected[0].message.contains("plugin"))
+        XCTAssertEqual(Set(track.sections[0].notes.compactMap(\.pitch)), [96, 97])
+        XCTAssertEqual(track.instrument?.name, "kit+96:a.wav,97:b.wav")
+    }
+
+    func testTheClaimsFoldIntoTheWrittenInstrumentAndEachTrackStartsAgain() {
+        let session = Session {
+            Track("bass", instrument: .generalMIDI(33)) { Section { Hit(file: "a.wav") } }
+            Track("other") { Section { Hit(file: "b.wav") } }
+        }
+        XCTAssertEqual(session.tracks[0].instrument?.program, 33)
+        XCTAssertEqual(session.tracks[0].instrument?.name, "program 33+96:a.wav")
+        XCTAssertEqual(session.tracks[1].instrument?.name, "kit+96:b.wav")
+    }
+
+    func testATrackThatClaimsNothingKeepsItsInstrument() {
+        XCTAssertNil(Track("t") { Section { "C3" } }.instrument)
+    }
+
+    func testRunningOutOfKeysIsReported() {
+        _ = Track("t") { Section { for i in 0..<40 { Hit(file: "\(i).wav") } } }
+        XCTAssertTrue(ScoreAdvisories.collected.contains { $0.message.contains("keys run out") })
+    }
+
+    func testAPartPlaysAHostStatement() {
+        let session = PartSession.of(Hit(file: "a.wav"))
+        XCTAssertEqual(session.tracks.first?.sections.first?.notes.first?.pitch, 96)
+        XCTAssertEqual(session.tracks.first?.instrument?.name, "kit+96:a.wav", "the part's track adopts its claims")
+    }
+
+    private struct Pad: HostSound, Equatable {
+        static let kind = "test.pad"
+        var referencePitch: Pitch? { 72 }
     }
 
     func testAnInstrumentPlaysOnItsOwnAsAPart() {
         let session = PartSession.of(Instrument.drums())
         XCTAssertEqual(session.tracks.first?.sections.first?.notes.first?.pitch, 36, "a drum kit plays its kick")
         XCTAssertEqual(PartSession.of(Instrument.generalMIDI(0)).tracks.first?.sections.first?.notes.first?.pitch, 60)
+        XCTAssertEqual(PartSession.of(Instrument(name: "pad", sound: Pad())).tracks.first?.sections.first?.notes.first?.pitch, 72,
+                       "a host sound names the key it is auditioned on")
     }
 }

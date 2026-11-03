@@ -35,8 +35,6 @@ public struct Instrument: Codable, Equatable {
 
     @_documentation(visibility: internal)
     public var sound: (any HostSound)?
-    @_documentation(visibility: internal)
-    public var sampleKit: SampleKitConfig?
 
     /// An instrument by name, with the General MIDI program a MIDI file should open it as.
     public init(_ name: String, program: Int? = nil, bank: Int = 0, percussion: Bool = false) {
@@ -45,13 +43,12 @@ public struct Instrument: Codable, Equatable {
 
     @_documentation(visibility: internal)
     public init(name: String, program: Int? = nil, bank: Int = 0, percussion: Bool = false,
-                sound: (any HostSound)? = nil, sampleKit: SampleKitConfig? = nil) {
+                sound: (any HostSound)? = nil) {
         self.name = name
         self.program = program.map { min(max($0, 0), 127) }
         self.bank = min(max(bank, 0), 16383)
         self.percussion = percussion
         self.sound = sound
-        self.sampleKit = sampleKit
     }
 
     /// A General MIDI instrument, by its program number (counting from 0).
@@ -67,7 +64,7 @@ public struct Instrument: Codable, Equatable {
     @_documentation(visibility: internal)
     public static func == (lhs: Instrument, rhs: Instrument) -> Bool {
         guard lhs.name == rhs.name, lhs.program == rhs.program, lhs.bank == rhs.bank,
-              lhs.percussion == rhs.percussion, lhs.sampleKit == rhs.sampleKit
+              lhs.percussion == rhs.percussion
         else { return false }
         switch (lhs.sound, rhs.sound) {
         case (nil, nil): return true
@@ -79,7 +76,7 @@ public struct Instrument: Codable, Equatable {
     // MARK: - Coding
 
     private enum CodingKeys: String, CodingKey {
-        case name, program, bank, percussion, sampleKit, soundKind, sound
+        case name, program, bank, percussion, soundKind, sound
     }
 
     @_documentation(visibility: internal)
@@ -89,7 +86,6 @@ public struct Instrument: Codable, Equatable {
         program = try c.decodeIfPresent(Int.self, forKey: .program)
         bank = try c.decodeIfPresent(Int.self, forKey: .bank) ?? 0
         percussion = try c.decodeIfPresent(Bool.self, forKey: .percussion) ?? false
-        sampleKit = try c.decodeIfPresent(SampleKitConfig.self, forKey: .sampleKit)
         // A host sound is decoded only by a reader that registered its kind; any other reader
         // keeps the MIDI half and passes over the rest.
         if let kind = try c.decodeIfPresent(String.self, forKey: .soundKind),
@@ -109,70 +105,9 @@ public struct Instrument: Codable, Equatable {
         try c.encodeIfPresent(program, forKey: .program)
         try c.encode(bank, forKey: .bank)
         try c.encode(percussion, forKey: .percussion)
-        try c.encodeIfPresent(sampleKit, forKey: .sampleKit)
         if let sound {
             try c.encode(type(of: sound).kind, forKey: .soundKind)
             try sound.encode(to: c.superEncoder(forKey: .sound))
         }
-    }
-}
-
-/// A sound a host makes itself, attached to an ``Instrument``: a synthesizer patch, a plugin.
-/// It travels with the session as JSON, and a reader decodes it only when it lists the type in
-/// its decoder's `userInfo[.hostSounds]` (see ``HostSounds``).
-@_documentation(visibility: internal)
-public protocol HostSound: Codable {
-    /// A name for the type that stays the same across modules, written beside the sound.
-    static var kind: String { get }
-    /// The sound a track's own samples would replace, named for the warning that says so
-    /// ("sampled instrument", "plugin"); nil when the two play together.
-    var replacedBySamples: String? { get }
-    func isEqual(to other: any HostSound) -> Bool
-}
-
-extension HostSound where Self: Equatable {
-    @_documentation(visibility: internal)
-    public func isEqual(to other: any HostSound) -> Bool {
-        (other as? Self).map { $0 == self } ?? false
-    }
-}
-
-/// The ``HostSound`` types a decoder recognises:
-/// `decoder.userInfo[.hostSounds] = HostSounds([MySound.self])`.
-@_documentation(visibility: internal)
-public struct HostSounds: @unchecked Sendable {
-    // Metatypes are immutable; nothing here is shared state.
-    public let types: [any HostSound.Type]
-    public init(_ types: [any HostSound.Type]) { self.types = types }
-}
-
-extension CodingUserInfoKey {
-    /// Where a decoder finds the ``HostSounds`` it should recognise.
-    @_documentation(visibility: internal)
-    public static let hostSounds = CodingUserInfoKey(rawValue: "MidiDSL.hostSounds")!
-}
-
-/// The audio files a track plays, and the keys they sit on: the slices a kit was built from,
-/// and the samples its drum lanes named.
-@_documentation(visibility: internal)
-public struct SampleKitConfig: Codable, Equatable {
-    public var slices: [Sample]
-    public var laneSlices: [Sample]
-    public var laneBaseKey: Pitch
-    public var baseKey: Pitch
-    public var chromatic: Bool
-    public var rootKey: Pitch
-
-    public static let laneBase: Pitch = 96
-
-    public init(slices: [Sample], baseKey: Pitch = 36,
-                chromatic: Bool = false, rootKey: Pitch = 48,
-                laneSlices: [Sample] = [], laneBaseKey: Pitch = SampleKitConfig.laneBase) {
-        self.slices = slices
-        self.laneSlices = laneSlices
-        self.laneBaseKey = laneBaseKey
-        self.baseKey = baseKey
-        self.chromatic = chromatic
-        self.rootKey = rootKey
     }
 }

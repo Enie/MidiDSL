@@ -93,13 +93,26 @@ public enum SectionArrayBuilder {
     }
 }
 
-struct PendingCurve {
+/// A curve written on a run of notes before the run knows how long it is: `timeScale` nil
+/// stretches the breakpoints over the whole run, otherwise they are in that many whole notes.
+@_documentation(visibility: internal)
+public struct PendingCurve {
     let target: AutomationTarget
     let breakpoints: [Double: Double]
     let timeScale: MusicTimeStamp?
     let shape: AutomationShape
 
-    static func applying(_ pending: [PendingCurve], to notes: [Note]) -> [Note] {
+    public init(target: AutomationTarget, breakpoints: [Double: Double], timeScale: MusicTimeStamp?,
+                shape: AutomationShape) {
+        self.target = target
+        self.breakpoints = breakpoints
+        self.timeScale = timeScale
+        self.shape = shape
+    }
+
+    /// The notes with each curve laid on them: a per-voice one sliced onto every note, a
+    /// track-wide one carried by the first.
+    public static func applying(_ pending: [PendingCurve], to notes: [Note]) -> [Note] {
         var result = notes
         guard !pending.isEmpty, !result.isEmpty else { return result }
         let span = result.reduce(0.0) { max($0, $1.startTime + $1.duration) }
@@ -596,14 +609,8 @@ public enum SectionBuilder {
             return n
         }
     }
-    public static func buildExpression(_ expression: Sample, line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
-        stamped(expression.reel.notes(), line: line, column: column, file: file)
-    }
-    public static func buildExpression(_ expression: SampleReel, line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
+    public static func buildExpression(_ expression: some NoteSource, line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
         stamped(expression.notes(), line: line, column: column, file: file)
-    }
-    public static func buildExpression(_ expression: [Sample], line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
-        stamped(expression.reduce(SampleReel([])) { $0 + $1 }.notes(), line: line, column: column, file: file)
     }
     public static func buildExpression(_ expression: DrumLane, line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
         stamped(expression.notes(barDuration: barDuration), line: line, column: column, file: file,

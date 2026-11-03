@@ -50,7 +50,7 @@ stdout free for the score's own `print(...)`.
 
 ## Documentation
 
-The language reference — notation, tracks and arrangement, drums, samples,
+The language reference — notation, tracks and arrangement, drums,
 dice, generators, instruments, automation — is at
 **[enie.github.io/MidiDSL](https://enie.github.io/MidiDSL/documentation/mididsl/)**.
 It is built from `Sources/MidiDSL/MidiDSL.docc`, so Xcode's documentation

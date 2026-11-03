@@ -102,9 +102,6 @@ public struct DrumLane {
     public let grid: String
 
     @_documentation(visibility: internal)
-    public let sample: Sample?
-
-    @_documentation(visibility: internal)
     public private(set) var volumeScale: Double = 1.0
 
     @_documentation(visibility: internal)
@@ -113,13 +110,6 @@ public struct DrumLane {
     public init(_ piece: DrumPiece, _ grid: String) {
         self.piece = piece
         self.grid = grid
-        self.sample = nil
-    }
-
-    public init(_ sample: Sample, _ grid: String) {
-        self.piece = DrumPiece(key: SampleKitCollector.key(for: sample))
-        self.grid = grid
-        self.sample = sample
     }
 
     public func volume(_ level: Double) -> DrumLane {
@@ -163,7 +153,8 @@ public struct DrumLane {
         return lane
     }
 
-    static let hitVelocity: UInt32 = 100
+    @_documentation(visibility: internal)
+    public static let hitVelocity: UInt32 = 100
     static let accentVelocity: UInt32 = 120
     static let ghostVelocity: UInt32 = 55
 
@@ -212,8 +203,6 @@ public struct DrumLane {
 ///
 /// See <doc:Drums>.
 public func Lane(_ piece: DrumPiece, _ grid: String) -> DrumLane { DrumLane(piece, grid) }
-/// A drum lane that plays a sample slice from a step grid. See <doc:Samples>.
-public func Lane(_ sample: Sample, _ grid: String) -> DrumLane { DrumLane(sample, grid) }
 /// A kick-drum lane. See <doc:Drums>.
 public func Kick(_ grid: String) -> DrumLane { DrumLane(.kick, grid) }
 /// A snare lane. See <doc:Drums>.

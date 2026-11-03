@@ -74,7 +74,7 @@ Drum tracks are written on channel 10. Every other track takes the next free cha
 
 ## Sounds a host makes
 
-A host that makes its own sounds attaches them to the same ``Instrument``: [Componium](https://eniestudio.de/componium) puts its synthesizer, its sampled instruments and Audio Unit plugins there, written in a score that also imports `Componium`. They travel with the session, and a MIDI file leaves them out, keeping the General MIDI program a sound names for that purpose.
+A host that makes its own sounds attaches them to the same ``Instrument``: [Componium](https://eniestudio.de/componium) puts its synthesizer, its sampled instruments, Audio Unit plugins and audio files there, written in a score that also imports `Componium`. They travel with the session, and a MIDI file leaves them out, keeping the General MIDI program a sound names for that purpose. An audio file a drum lane plays takes a key of its own from 96 up, so in the MIDI file it is a note on that key.
 
 ## Topics
 

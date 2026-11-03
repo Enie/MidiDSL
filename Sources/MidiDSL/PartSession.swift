@@ -65,16 +65,9 @@ public enum PartSession {
         oneSection { Section { lane } }
     }
 
-    public static func of(_ sample: Sample) -> Session {
-        oneSection { Section { sample } }
-    }
-
-    public static func of(_ reel: SampleReel) -> Session {
-        oneSection { Section { reel } }
-    }
-
-    public static func of(_ samples: [Sample]) -> Session {
-        oneSection { Section { samples } }
+    @_documentation(visibility: internal)
+    public static func of(_ content: some NoteSource) -> Session {
+        oneSection { Section { content } }
     }
 
     // MARK: - A sound rather than music
@@ -95,7 +88,7 @@ public enum PartSession {
     static func nothingToPlay(_ typeName: String) -> [Track] {
         ScoreAdvisories.note(SessionAdvisory(
             message: "there is nothing to play in this declaration — it is a \(typeName). "
-                + "A part plays a Section, a Track, notation, a drum lane, a sample, "
+                + "A part plays a Section, a Track, notation, a drum lane, a host statement such as a sample, "
                 + "an instrument, or a type conforming to Score."))
         return []
     }
@@ -103,8 +96,9 @@ public enum PartSession {
     // MARK: - Private
 
     private static func oneSection(_ build: () -> Section) -> Session {
-        let section = unplaceable(build())
-        return Session { Track(trackName) { section } }
+        // Built inside the track, so the keys its content claims are the track's (a Session
+        // starts its tracks' claims afresh).
+        Session { Track(trackName) { unplaceable(build()) } }
     }
 
     private static func unplaceable(_ section: Section) -> Section {
@@ -120,11 +114,7 @@ public enum PartSession {
     static let generatedFile = "MidiDSL/PartSession.swift"
 
     private static func referencePitch(for instrument: Instrument) -> Pitch {
-        if let kit = instrument.sampleKit {
-            if kit.chromatic { return kit.rootKey }
-            if !kit.slices.isEmpty { return kit.baseKey }
-            if !kit.laneSlices.isEmpty { return kit.laneBaseKey }
-        }
+        if let pitch = instrument.sound?.referencePitch { return pitch }
         return instrument.percussion ? 36 : 60
     }
 }
