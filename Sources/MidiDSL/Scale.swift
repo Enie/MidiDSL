@@ -1,10 +1,14 @@
 import Foundation
 
+/// The mode of a key: major, minor, the church modes, pentatonics and others.
+///
+/// See <doc:ProgressionsAndScales>.
 public enum ScaleMode: String, Codable, CaseIterable, Hashable {
     case major, minor, dorian, phrygian, lydian, mixolydian, locrian
     case harmonicMinor, melodicMinor
     case majorPentatonic, minorPentatonic, blues, wholeTone, chromatic
 
+    @_documentation(visibility: internal)
     public var steps: [Int] {
         switch self {
         case .major:           return [0, 2, 4, 5, 7, 9, 11]
@@ -24,9 +28,11 @@ public enum ScaleMode: String, Codable, CaseIterable, Hashable {
         }
     }
 
+    @_documentation(visibility: internal)
     public var degreeCount: Int { steps.count }
 }
 
+@_documentation(visibility: internal)
 public struct ScaleDegree: Equatable, Hashable, Codable {
     public var degree: Int
     public var octave: Int
@@ -39,8 +45,13 @@ public struct ScaleDegree: Equatable, Hashable, Codable {
     }
 }
 
+/// A key: a root and a mode, which scale-degree notation is read in.
+///
+/// See <doc:ProgressionsAndScales>.
 public struct Scale: Equatable, Hashable, Codable {
+    @_documentation(visibility: internal)
     public var root: Pitch
+    @_documentation(visibility: internal)
     public var mode: ScaleMode
 
     public init(_ root: Pitch, _ mode: ScaleMode) {
@@ -52,6 +63,7 @@ public struct Scale: Equatable, Hashable, Codable {
         self.init(pitchForNoteName(root) ?? 60, mode)
     }
 
+    @_documentation(visibility: internal)
     public func pitch(_ written: ScaleDegree) -> Pitch {
         let steps = mode.steps
         let count = steps.count
@@ -62,16 +74,20 @@ public struct Scale: Equatable, Hashable, Codable {
         return Pitch(min(max(value, 0), 127))
     }
 
+    @_documentation(visibility: internal)
     public var pitches: [Pitch] {
         (1...mode.degreeCount).map { pitch(ScaleDegree(degree: $0)) }
     }
 
+    @_documentation(visibility: internal)
     public static let unkeyed = Scale(60, .major)
 
     // MARK: Note names (the older, string-shaped API)
 
+    @_documentation(visibility: internal)
     public static let noteSequence: [NoteNotation] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
+    @_documentation(visibility: internal)
     public static func generateScale(root: String, intervals: [Int]) -> [String] {
         guard let rootPitch = pitchForNoteName(root), !intervals.isEmpty else {
             return []
@@ -88,14 +104,17 @@ public struct Scale: Equatable, Hashable, Codable {
         return scale
     }
 
+    @_documentation(visibility: internal)
     public static func majorScale(for root: String) -> [String] {
         return generateScale(root: root, intervals: [2, 2, 1, 2, 2, 2, 1])
     }
 
+    @_documentation(visibility: internal)
     public static func minorScale(for root: String) -> [String] {
         return generateScale(root: root, intervals: [2, 1, 2, 2, 1, 2, 2])
     }
 
+    @_documentation(visibility: internal)
     public static func dorianScale(for root: String) -> [String] {
         return generateScale(root: root, intervals: [2, 1, 2, 2, 2, 1, 2])
     }

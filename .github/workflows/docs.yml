@@ -1,0 +1,51 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the documentation archive
+        run: |
+          xcodebuild docbuild \
+            -scheme MidiDSL \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath .build/docbuild
+
+      - name: Transform it for static hosting
+        run: |
+          archive=$(find .build/docbuild -name 'MidiDSL.doccarchive' -type d | head -1)
+          $(xcrun --find docc) process-archive transform-for-static-hosting "$archive" \
+            --hosting-base-path MidiDSL \
+            --output-path site
+          # The site root has no page of its own; send it to the package's.
+          echo '<!doctype html><meta http-equiv="refresh" content="0; url=documentation/mididsl/">' > site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}documentation/mididsl/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

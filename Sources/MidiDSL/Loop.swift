@@ -1,5 +1,6 @@
 import Foundation
 
+@_documentation(visibility: internal)
 public struct LoopStamp: Equatable, Hashable, Codable {
     public let line: Int
     public let column: Int
@@ -12,6 +13,7 @@ public struct LoopStamp: Equatable, Hashable, Codable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct SessionAdvisory: Equatable, Codable {
     public let message: String
     public let line: Int?
@@ -26,7 +28,7 @@ public struct SessionAdvisory: Equatable, Codable {
     }
 }
 
-public enum ScoreAdvisories {
+enum ScoreAdvisories {
     nonisolated(unsafe) public static var collected: [SessionAdvisory] = []
 
     static func note(_ advisory: SessionAdvisory) {
@@ -35,8 +37,14 @@ public enum ScoreAdvisories {
     }
 }
 
+/// Sections repeated on a grid of their own inside a track.
+///
+/// The body is handed the round number, so it can vary from one round to the next.
+/// See <doc:TracksAndArrangement>.
 public struct Loop {
+    @_documentation(visibility: internal)
     public let bars: Int
+    @_documentation(visibility: internal)
     public let times: Int?
 
     private let line: Int
@@ -126,7 +134,7 @@ public struct Loop {
     }
 }
 
-public enum LoopFill {
+enum LoopFill {
     nonisolated(unsafe) static var pieceLength: MusicTimeStamp? = nil
     nonisolated(unsafe) static var sawFillingLoop = false
 

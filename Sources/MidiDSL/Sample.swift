@@ -1,5 +1,6 @@
 import Foundation
 
+@_documentation(visibility: internal)
 public enum SampleEffect: Equatable, Codable {
     case bitCrush(bits: Int, rate: Double?)
     case drive(Double)
@@ -8,16 +9,23 @@ public enum SampleEffect: Equatable, Codable {
     public static let names = ["bitCrush", "drive", "ringMod"]
 }
 
+/// One edge of a sample slice, in seconds, beats, bars or a fraction of the file.
+///
+/// See <doc:Samples>.
 public struct SampleBound: Equatable, Codable {
+    @_documentation(visibility: internal)
     public enum Unit: String, Equatable, Codable {
         case seconds
         case fraction
         case beats
         case bars
     }
+    @_documentation(visibility: internal)
     public var unit: Unit
+    @_documentation(visibility: internal)
     public var value: Double
 
+    @_documentation(visibility: internal)
     public init(_ unit: Unit, _ value: Double) {
         self.unit = unit
         self.value = max(0, value)
@@ -29,17 +37,30 @@ public struct SampleBound: Equatable, Codable {
     public static func bars(_ v: Double) -> SampleBound { SampleBound(.bars, v) }
 }
 
+/// An audio file, or a slice of one, with gain, tuning, fades and an insert effect chain.
+///
+/// See <doc:Samples>.
 public struct Sample: Equatable, Codable {
+    @_documentation(visibility: internal)
     public let file: String
+    @_documentation(visibility: internal)
     public private(set) var start: SampleBound?
+    @_documentation(visibility: internal)
     public private(set) var end: SampleBound?
 
+    @_documentation(visibility: internal)
     public private(set) var gain: Double = 1.0
+    @_documentation(visibility: internal)
     public private(set) var tune: Double = 0
+    @_documentation(visibility: internal)
     public private(set) var speed: Double = 1.0
+    @_documentation(visibility: internal)
     public private(set) var reversed: Bool = false
+    @_documentation(visibility: internal)
     public private(set) var fadeIn: Double = 0
+    @_documentation(visibility: internal)
     public private(set) var fadeOut: Double = 0
+    @_documentation(visibility: internal)
     public private(set) var effects: [SampleEffect] = []
 
     public init(_ file: String) {
@@ -137,7 +158,7 @@ public struct Sample: Equatable, Codable {
     }
 }
 
-public enum SampleKitCollector {
+enum SampleKitCollector {
     nonisolated(unsafe) public static var claimed: [Sample] = []
 
     static func key(for sample: Sample, base: Pitch = SampleKitConfig.laneBase) -> Pitch {
@@ -163,6 +184,7 @@ public enum SampleKitCollector {
     public static func reset() { claimed = [] }
 }
 
+@_documentation(visibility: internal)
 public struct SampleReel {
     indirect enum Part {
         case take(Sample, slot: MusicTimeStamp)
@@ -249,15 +271,19 @@ extension Sample {
 
 // MARK: - Laying samples end to end
 
+@_documentation(visibility: internal)
 public func + (lhs: Sample, rhs: Sample) -> SampleReel {
     SampleReel(lhs.reel.parts + rhs.reel.parts)
 }
+@_documentation(visibility: internal)
 public func + (lhs: Sample, rhs: SampleReel) -> SampleReel {
     SampleReel(lhs.reel.parts + rhs.joinable)
 }
+@_documentation(visibility: internal)
 public func + (lhs: SampleReel, rhs: Sample) -> SampleReel {
     SampleReel(lhs.joinable + rhs.reel.parts)
 }
+@_documentation(visibility: internal)
 public func + (lhs: SampleReel, rhs: SampleReel) -> SampleReel {
     SampleReel(lhs.joinable + rhs.joinable)
 }

@@ -1,5 +1,6 @@
 import Foundation
 
+@_documentation(visibility: internal)
 public enum LoopActivity: Equatable, Hashable, Codable {
     case range(from: Int?, through: Int?)
     case set([Int])
@@ -38,12 +39,17 @@ extension LoopActivity {
     }
 }
 
+@_documentation(visibility: internal)
 public enum SectionOrder: String, Equatable, Codable {
     case written
     case shuffled
 }
 
+/// One instrument's part: sections played one after another, with its sound and arrangement.
+///
+/// See <doc:TracksAndArrangement>.
 public struct Track: Equatable, Codable, Identifiable {
+    @_documentation(visibility: internal)
     public static func == (lhs: Track, rhs: Track) -> Bool {
         return lhs.name == rhs.name &&
         lhs.sections == rhs.sections &&
@@ -55,18 +61,29 @@ public struct Track: Equatable, Codable, Identifiable {
         && lhs.muted == rhs.muted
     }
 
+    @_documentation(visibility: internal)
     public var id: UUID = UUID()
+    @_documentation(visibility: internal)
     public let name: String
+    @_documentation(visibility: internal)
     public let sections: [Section]
+    @_documentation(visibility: internal)
     public let instrument: SynthPatch?
+    @_documentation(visibility: internal)
     public let volume: Double?
+    @_documentation(visibility: internal)
     public let activity: LoopActivity?
+    @_documentation(visibility: internal)
     public let sectionOrder: SectionOrder?
+    @_documentation(visibility: internal)
     public let shuffleLoops: LoopActivity?
+    @_documentation(visibility: internal)
     public let muted: Bool?
 
+    @_documentation(visibility: internal)
     public var isMuted: Bool { muted == true }
 
+    @_documentation(visibility: internal)
     public var duration: MusicTimeStamp {
         sections.serialWindows.last.map { $0.start + $0.duration } ?? 0
     }
@@ -97,6 +114,7 @@ public struct Track: Equatable, Codable, Identifiable {
         return patch
     }
 
+    @_documentation(visibility: internal)
     public init(name: String, @SectionArrayBuilder _ content: () -> [Section]) {
         self.name = name
         self.sections = content()
@@ -113,6 +131,7 @@ public struct Track: Equatable, Codable, Identifiable {
         self.init(name: name, instrument: instrument, content)
     }
 
+    @_documentation(visibility: internal)
     public init(name: String, instrument: SynthPatch,
                 @SectionArrayBuilder _ content: () -> [Section]) {
         self.name = name
@@ -130,6 +149,7 @@ public struct Track: Equatable, Codable, Identifiable {
         self.init(name: name, instrument: instrument.build(), content)
     }
 
+    @_documentation(visibility: internal)
     public init(name: String, instrument: Synth,
                 @SectionArrayBuilder _ content: () -> [Section]) {
         self.init(name: name, instrument: instrument.build(), content)
@@ -278,6 +298,7 @@ public struct Track: Equatable, Codable, Identifiable {
         return Track.__create(name: name, sections: sections, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }
 
+    @_documentation(visibility: internal)
     public func replacingSections(_ newSections: [Section]) -> Track {
         return Track.__create(name: name, sections: newSections, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }

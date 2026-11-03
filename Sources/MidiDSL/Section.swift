@@ -1,6 +1,7 @@
 import Foundation
 
 public extension Array where Element == Section {
+    @_documentation(visibility: internal)
     var serialWindows: [(start: MusicTimeStamp, duration: MusicTimeStamp)] {
         var result: [(start: MusicTimeStamp, duration: MusicTimeStamp)] = []
         result.reserveCapacity(count)
@@ -14,6 +15,10 @@ public extension Array where Element == Section {
     }
 }
 
+/// Layers that sound together.
+///
+/// Every statement in a `Section {}` starts at the section's start, and the longest one sets its
+/// length. A track plays its sections one after another. See <doc:Sections>.
 public struct Section: Equatable, Codable, Identifiable {
 
     private struct AudibleNote: Hashable {
@@ -61,6 +66,7 @@ public struct Section: Equatable, Codable, Identifiable {
             && a.loop == b.loop
     }
 
+    @_documentation(visibility: internal)
     public static func == (lhs: Section, rhs: Section) -> Bool {
         guard lhs.notes.count == rhs.notes.count,
               lhs.activity == rhs.activity,
@@ -86,20 +92,28 @@ public struct Section: Equatable, Codable, Identifiable {
         return true
     }
 
+    @_documentation(visibility: internal)
     public var id: UUID = UUID()
+    @_documentation(visibility: internal)
     public var notes: [Note] = []
+    @_documentation(visibility: internal)
     public var activity: LoopActivity? = nil
+    @_documentation(visibility: internal)
     public var muted: Bool? = nil
+    @_documentation(visibility: internal)
     public var automation: [AutomationCurve]? = nil
 
+    @_documentation(visibility: internal)
     public var isMuted: Bool { muted == true }
 
+    @_documentation(visibility: internal)
     public var duration: MusicTimeStamp { notes.reduce(into: 0) { $0 = max($0, $1.startTime+$1.duration) } }
 
     public init(@SectionBuilder _ content: () -> Section) {
         self = content()
     }
     
+    @_documentation(visibility: internal)
     public init(notes: [Note]) {
         self.notes = notes
     }

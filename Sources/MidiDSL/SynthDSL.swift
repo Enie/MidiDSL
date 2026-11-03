@@ -1,5 +1,8 @@
 import Foundation
 
+/// The waveform of one oscillator in the built-in synthesizer.
+///
+/// See <doc:Instruments>.
 public enum SynthWaveform: String, Codable {
     case sine
     case square
@@ -8,23 +11,37 @@ public enum SynthWaveform: String, Codable {
     case noise
 }
 
+/// The filter type of the built-in synthesizer.
+///
+/// See <doc:Instruments>.
 public enum SynthFilterType: String, Codable {
     case lowPass
     case highPass
     case bandPass
 }
 
+/// How quickly an oscillator's overtones fall away.
+///
+/// See <doc:Instruments>.
 public enum OvertoneDecay: String, Codable {
     case linear
     case exponential
     case custom
 }
 
+/// Overtones added to one oscillator of the built-in synthesizer.
+///
+/// See <doc:Instruments>.
 public struct OvertoneConfig: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var enabled: Bool
+    @_documentation(visibility: internal)
     public var count: Int
+    @_documentation(visibility: internal)
     public var mix: Float
+    @_documentation(visibility: internal)
     public var decay: OvertoneDecay
+    @_documentation(visibility: internal)
     public var customAmplitudes: [Float]?
 
     public init(enabled: Bool = false, count: Int = 3, mix: Float = 0.5, decay: OvertoneDecay = .exponential, customAmplitudes: [Float]? = nil) {
@@ -36,8 +53,10 @@ public struct OvertoneConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct OscillatorConfig: Codable, Equatable {
     public var waveform: SynthWaveform
+    @_documentation(visibility: internal)
     public var mix: Float
     public var detune: Float
     public var overtones: OvertoneConfig
@@ -50,13 +69,18 @@ public struct OscillatorConfig: Codable, Equatable {
     }
 }
 
+/// The shape of the synthesizer's envelope segments.
+///
+/// See <doc:Instruments>.
 public enum EnvelopeCurve: String, Codable {
     case linear
     case exponential
 }
 
+@_documentation(visibility: internal)
 public struct EnvelopeConfig: Codable, Equatable {
     public var attack: Double
+    @_documentation(visibility: internal)
     public var decay: Double
     public var sustain: Float
     public var release: Double
@@ -71,9 +95,12 @@ public struct EnvelopeConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct PitchEnvelopeConfig: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var enabled: Bool
     public var amount: Float
+    @_documentation(visibility: internal)
     public var decay: Double
 
     public init(enabled: Bool = false, amount: Float = 0.0, decay: Double = 0.05) {
@@ -83,7 +110,9 @@ public struct PitchEnvelopeConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct FilterConfig: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var enabled: Bool
     public var type: SynthFilterType
     public var cutoff: Float
@@ -97,8 +126,11 @@ public struct FilterConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct ReverbConfig: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var enabled: Bool
+    @_documentation(visibility: internal)
     public var mix: Float
 
     public init(enabled: Bool = false, mix: Float = 0.3) {
@@ -107,6 +139,7 @@ public struct ReverbConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct SamplerConfig: Codable, Equatable {
     public var soundFont: String?
     public var program: Int
@@ -121,7 +154,9 @@ public struct SamplerConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct AudioUnitConfig: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var name: String
     public var preset: String?
 
@@ -131,6 +166,7 @@ public struct AudioUnitConfig: Codable, Equatable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct SampleKitConfig: Codable, Equatable {
     public var slices: [Sample]
     public var laneSlices: [Sample]
@@ -153,20 +189,36 @@ public struct SampleKitConfig: Codable, Equatable {
     }
 }
 
+/// A built sound, as a track stores it. Build one with ``Synth``.
+///
+/// See <doc:Instruments>.
 public class SynthPatch: Codable, Equatable {
+    @_documentation(visibility: internal)
     public var name: String
+    @_documentation(visibility: internal)
     public var oscillatorCount: Int
+    @_documentation(visibility: internal)
     public var oscillators: [OscillatorConfig]
+    @_documentation(visibility: internal)
     public var filter: FilterConfig
+    @_documentation(visibility: internal)
     public var envelope: EnvelopeConfig
+    @_documentation(visibility: internal)
     public var pitchEnvelope: PitchEnvelopeConfig
+    @_documentation(visibility: internal)
     public var reverb: ReverbConfig
+    @_documentation(visibility: internal)
     public var volume: Float
+    @_documentation(visibility: internal)
     public var sampler: SamplerConfig?
+    @_documentation(visibility: internal)
     public var audioUnit: AudioUnitConfig?
+    @_documentation(visibility: internal)
     public var effects: [AudioUnitConfig]?
+    @_documentation(visibility: internal)
     public var sampleKit: SampleKitConfig?
 
+    @_documentation(visibility: internal)
     public init(name: String) {
         self.name = name
         self.oscillatorCount = 1
@@ -181,6 +233,7 @@ public class SynthPatch: Codable, Equatable {
         self.sampleKit = nil
     }
 
+    @_documentation(visibility: internal)
     public static func == (lhs: SynthPatch, rhs: SynthPatch) -> Bool {
         return lhs.name == rhs.name &&
                lhs.oscillatorCount == rhs.oscillatorCount &&
@@ -197,6 +250,10 @@ public class SynthPatch: Codable, Equatable {
     }
 }
 
+/// A builder for a track's sound: the built-in synthesizer, a General MIDI sampler, audio files,
+/// or an Audio Unit plugin.
+///
+/// See <doc:Instruments>.
 public class Synth {
     private var patch: SynthPatch
 

@@ -14,6 +14,7 @@ import Foundation
 /// ```
 public enum MIDIFile {
 
+    @_documentation(visibility: internal)
     public static let ticksPerQuarter = 480
 
     /// Writes the file. `loops` is how many passes to write; nil writes the session's form
@@ -58,6 +59,7 @@ public enum MIDIFile {
     }
 
     /// One pass, in ticks: `Session.loopBars` if set, else the written material rounded up to whole bars.
+    @_documentation(visibility: internal)
     public static func loopLengthTicks(for session: Session) -> Int {
         let bar = barLength(session.timeSignature ?? .fourFour)
         if let bars = session.loopBars {
@@ -106,6 +108,7 @@ public enum MIDIFile {
 
     // MARK: - Track event list (pure, inspectable pre-serialization)
 
+    @_documentation(visibility: internal)
     public struct TrackEvent: Equatable {
         public enum Kind: Equatable {
             case noteOn(note: UInt8, velocity: UInt8)
@@ -149,6 +152,7 @@ public enum MIDIFile {
 
     /// One track's events in tick order, before they are encoded: what the file says, in a
     /// form a test (or another writer) can read.
+    @_documentation(visibility: internal)
     public static func trackEvents(for track: Track, loops: Int, loopTicks: Int, tempo: Double,
                                    seed: UInt64 = 0, masterVolume: Double = 1.0) -> [TrackEvent] {
         guard !track.isMuted else { return [] }

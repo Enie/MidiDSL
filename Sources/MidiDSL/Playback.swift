@@ -9,6 +9,7 @@ import Foundation
 extension Note {
     /// The pitch this note sounds on `loopIndex`: its own pitch, or the member of its note
     /// set chosen for that pass. Nil for a rest.
+    @_documentation(visibility: internal)
     public func resolvedPitch(loopIndex: Int, seed: UInt64 = 0) -> Pitch? {
         guard let base = pitch else { return nil }
         guard let variants = pitchVariants, variants.count > 1 else { return base }
@@ -22,11 +23,13 @@ extension Note {
 
 /// Where a section sits on its track: sections play one after another, so each one starts
 /// where the previous ends.
+@_documentation(visibility: internal)
 public typealias SectionWindow = (start: Double, duration: Double)
 
 /// The order a `Track.shuffleSections()` track plays its sections in on each pass. Pass 0
 /// plays them as written; later passes permute them, seeded only by the pass and the count
 /// so tracks of equal length stay aligned with each other.
+@_documentation(visibility: internal)
 public enum SectionShuffle {
 
     public static func isShuffled(_ track: Track, loopIndex: Int) -> Bool {
@@ -81,6 +84,7 @@ public enum SectionShuffle {
 
 /// One breakpoint of a sounding note's ramp: how far from its final pitch it is, in
 /// semitones, and the gain its volume curve and legato carries leave it at.
+@_documentation(visibility: internal)
 public struct PitchRampPoint: Equatable {
     public let time: Double
     public let semitones: Float
@@ -95,6 +99,7 @@ public struct PitchRampPoint: Equatable {
 
 /// A note's slides, fall and `.volume` curves as one piecewise-linear ramp, in the same time
 /// unit the arguments are given in.
+@_documentation(visibility: internal)
 public func pitchRampPoints(slides: [SlideStep]?, fall: Fall? = nil, duration: Double, finalPitch: UInt32,
                             automation: [AutomationCurve]? = nil) -> [PitchRampPoint] {
     let quickGlide = 0.08
@@ -164,6 +169,7 @@ public func pitchRampPoints(slides: [SlideStep]?, fall: Fall? = nil, duration: D
 /// A ramp spelled in MIDI's terms: pitch bend values, the RPN that widens the bend range,
 /// and CC 11 (expression) for a volume curve. Shared by the MIDI file and any live MIDI
 /// output, so both bend a slide the same way.
+@_documentation(visibility: internal)
 public enum MIDIRamp {
 
     public struct Bend: Equatable {

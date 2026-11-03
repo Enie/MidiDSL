@@ -1,4 +1,7 @@
 import Foundation
+/// The order an arpeggiated chord plays its tones in.
+///
+/// See <doc:ChordsAndVoicings>.
 public enum ArpeggioPattern {
     case up, down, random
     case custom([Int])
@@ -7,6 +10,9 @@ public enum ArpeggioPattern {
     case rootLast
 }
 
+/// The kind of chord built on a root: major, minor, seventh, suspended, extended and so on.
+///
+/// See <doc:ChordsAndVoicings>.
 public enum ChordQuality: Equatable {
     case major, minor, diminished, augmented, dominant7, major7, minor7, add9, sus4, sus2, majorSixth, minorSixth, dominant7sus4, add11, power, halfDiminished, diminished7, dominant9, major9, minor9, minor11, dominant13, sixNine, minorMajor7, augmented7, augmentedMajor7, minorAdd9, dominant11, major11, major13, minor13, dominant9sus4, custom(String)
 
@@ -83,6 +89,7 @@ public enum ChordQuality: Equatable {
 }
 
 public extension ChordQuality {
+    @_documentation(visibility: internal)
     var notation: String {
         switch self {
         case .major:
@@ -156,6 +163,7 @@ public extension ChordQuality {
 }
 
 public extension ChordQuality {
+    @_documentation(visibility: internal)
     init?(from notation: String) {
         if let exact = ChordQuality.exactMatch(notation) {
             self = exact
@@ -270,15 +278,18 @@ public extension ChordQuality {
     }
 }
 
+@_documentation(visibility: internal)
 public typealias ChordNotation = String
 public extension ChordNotation {
     private var rootLength: Int {
         let chars: [Character] = Array(self)
         return chars.count > 1 && (chars[1] == "#" || chars[1] == "b") ? 2 : 1
     }
+    @_documentation(visibility: internal)
     var root: NoteNotation {
         String(prefix(rootLength))
     }
+    @_documentation(visibility: internal)
     var quality: ChordQuality {
         ChordQuality(from: String(dropFirst(rootLength))) ?? .major
     }
@@ -335,10 +346,18 @@ func arpeggiatedNotes(_ notes: [Note], pattern: ArpeggioPattern,
     }
 }
 
+/// A chord: a root, a quality and a duration, with modifiers for voicing, strumming and arpeggios.
+///
+/// Written as notation (`"Am7"`) it needs no type at all; build one directly to transform it in code.
+/// See <doc:ChordsAndVoicings>.
 public class Chord {
+    @_documentation(visibility: internal)
     public var notes: [Note] = []
+    @_documentation(visibility: internal)
     public var root: NoteNotation
+    @_documentation(visibility: internal)
     public var quality: ChordQuality
+    @_documentation(visibility: internal)
     public var duration: MusicTimeStamp { notes.reduce(into: 0) { $0 = max($0, $1.startTime+$1.duration) } }
     
     public init(_ root: NoteNotation, _ quality: ChordQuality, _ duration: MusicTimeStamp = 1.0) {
@@ -370,33 +389,40 @@ public class Chord {
         return notes
     }
     
+    @_documentation(visibility: internal)
     public static let majorChordTypes: [String: ChordQuality] = [
         "I": .major, "ii": .minor, "iii": .minor, "IV": .major, "V": .major, "vi": .minor, "vii": .diminished
     ]
     
+    @_documentation(visibility: internal)
     public static let minorChordTypes: [String: ChordQuality] = [
         "i": .minor, "ii": .diminished, "III": .major, "iv": .minor, "v": .minor, "VI": .major, "VII": .major
     ]
     
+    @_documentation(visibility: internal)
     public func copy() -> Chord {
         let chord = Chord(root, quality)
         chord.notes = notes
         return chord
     }
 
+    @_documentation(visibility: internal)
     public var notation: ChordNotation {
         return "\(root)\(quality.notation)"
     }
     
+    @_documentation(visibility: internal)
     public var noteNotations: [NoteNotation] {
         return notes.map{NoteNotation(pitch: $0.pitch)}
     }
     
+    @_documentation(visibility: internal)
     public static let romanNumeralToScaleDegree: [String: Int] = [
         "I": 0, "II": 1, "III": 2, "IV": 3, "V": 4, "VI": 5, "VII": 6,
         "i": 0, "ii": 1, "iii": 2, "iv": 3, "v": 4, "vi": 5, "vii": 6
     ]
     
+    @_documentation(visibility: internal)
     public class func transformRomanNumeral(_ romanNumeral: String, inKey root: String, isMinor: Bool = false) -> String? {
         let core = String(romanNumeral.prefix(while: { "IiVv".contains($0) }))
         let suffix = String(romanNumeral.dropFirst(core.count))
@@ -535,4 +561,5 @@ public class Chord {
     }
 }
 
+@_documentation(visibility: internal)
 public typealias Chords = [Chord]

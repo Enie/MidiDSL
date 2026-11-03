@@ -1,5 +1,6 @@
 import Foundation
 
+@_documentation(visibility: internal)
 public enum PartSession {
 
     public static let trackName = "part"

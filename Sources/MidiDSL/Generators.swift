@@ -2,6 +2,9 @@ import Foundation
 
 // MARK: - Phrase
 
+/// Bar notation computed slot by slot, one token per slot.
+///
+/// See <doc:GeneratingParts>.
 public func Phrase(bars: Int, beats: Int = 4, subdivisions: Int = 1,
                    _ fill: (GridStep) -> String) -> String {
     let bars = max(0, bars), beats = max(1, beats), subdivisions = max(1, subdivisions)
@@ -66,10 +69,15 @@ extension Array where Element: Hashable {
 
 // MARK: - Markov
 
+/// A Markov chain over notation tokens, learned from a phrase or stated as a table.
+///
+/// See <doc:GeneratingMelodies>.
 public struct Markov {
 
+    @_documentation(visibility: internal)
     public let order: Int
 
+    @_documentation(visibility: internal)
     public let slots: Int
 
     private let table: [[String]: [String]]
@@ -318,6 +326,9 @@ public struct Markov {
 
 // MARK: - Wave: breakpoints shaped like an oscillator
 
+/// Automation breakpoints shaped like an oscillator: sine, triangle, sawtooth, square or random steps.
+///
+/// See <doc:Automation>.
 public enum Wave {
 
     public static func sine(cycles: Double = 1, span: Double = 1,

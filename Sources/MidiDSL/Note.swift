@@ -1,7 +1,11 @@
 import Foundation
 
+/// A position or length in whole notes: `1.0` is one whole note, `.quarter` is `0.25`.
+///
+/// See <doc:PitchesAndDurations>.
 public typealias MusicTimeStamp = Double
 
+@_documentation(visibility: internal)
 public let pitchForNote: [String: UInt32] = [
     "C0": 0, "C#0": 1, "Db0": 1, "D0": 2, "D#0": 3, "Eb0": 3, "E0": 4, "F0": 5,
     "F#0": 6, "Gb0": 6, "G0": 7, "G#0": 8, "Ab0": 8, "A0": 9, "A#0": 10, "Bb0": 10, "B0": 11,
@@ -33,6 +37,7 @@ public let pitchForNote: [String: UInt32] = [
 private let semitoneForNoteLetter: [Character: Int] = ["C": 0, "D": 2, "E": 4, "F": 5,
                                                        "G": 7, "A": 9, "B": 11]
 
+@_documentation(visibility: internal)
 public func pitchForNoteName(_ name: String) -> UInt32? {
     var i = name.startIndex
     guard i < name.endIndex, let base = semitoneForNoteLetter[name[i]] else { return nil }
@@ -55,10 +60,13 @@ public func pitchForNoteName(_ name: String) -> UInt32? {
     return UInt32(value)
 }
 
+@_documentation(visibility: internal)
 public typealias NoteNotation = String
 public extension NoteNotation {
+    @_documentation(visibility: internal)
     var pitch: UInt32? { return pitchForNoteName(self) }
 
+    @_documentation(visibility: internal)
     init(pitch: UInt32?) {
         if let note = pitchForNote.first(where: { $0.value == pitch && $0.key.range(of: "b") == nil })?.key {
             self = note
@@ -71,14 +79,19 @@ public extension NoteNotation {
     }
 }
 
+/// How a note set chooses its member on each pass: upward, downward, alternating, or by the dice.
+///
+/// See <doc:NotesRestsAndNoteSets>.
 public enum NoteSetMode: String, Codable {
     case up, down, random, alternating
 
+    @_documentation(visibility: internal)
     public func soundingIndex(count: Int, pass: Int, diceSalt: UInt64, seed: UInt64) -> Int {
         variantIndex(loopIndex: pass, count: count,
                      salt: Dice.salt(diceSalt, for: .pitch, seed: seed))
     }
 
+    @_documentation(visibility: internal)
     public func variantIndex(loopIndex: Int, count: Int, salt: UInt64 = 0) -> Int {
         let n = count
         guard n > 1 else { return 0 }
@@ -97,11 +110,13 @@ public enum NoteSetMode: String, Codable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct SlideStep: Equatable, Hashable, Codable {
     public var from: Pitch
     public var at: MusicTimeStamp
     public var over: MusicTimeStamp
     public var carry: Double?
+    @_documentation(visibility: internal)
     public var degree: ScaleDegree?
 
     public init(from: Pitch, at: MusicTimeStamp, over: MusicTimeStamp = 0, carry: Double? = nil,
@@ -114,6 +129,7 @@ public struct SlideStep: Equatable, Hashable, Codable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct Fall: Equatable, Hashable, Codable {
     public var semitones: Int
     public var over: MusicTimeStamp
@@ -124,6 +140,10 @@ public struct Fall: Equatable, Hashable, Codable {
     }
 }
 
+/// What an automation curve moves: volume, filter cutoff and resonance, reverb, a MIDI controller,
+/// or a parameter of an effect plugin.
+///
+/// See <doc:Automation>.
 public enum AutomationTarget: Equatable, Hashable, Codable {
     case volume
     case cutoff
@@ -135,12 +155,16 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     /// the parameter's own range, whatever unit the plugin keeps it in.
     case effect(String, parameter: String)
 
+    @_documentation(visibility: internal)
     public static let fixed: [AutomationTarget] = [.volume, .cutoff, .resonance, .reverb]
 
+    @_documentation(visibility: internal)
     public var isPerVoice: Bool { self == .volume }
 
+    @_documentation(visibility: internal)
     public var neutralValue: Double? { isPerVoice ? 1.0 : nil }
 
+    @_documentation(visibility: internal)
     public var valueRange: ClosedRange<Double> {
         switch self {
         case .volume, .reverb, .cc, .effect: return 0...1
@@ -150,6 +174,9 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     }
 }
 
+/// How an automation curve travels from one breakpoint to the next.
+///
+/// See <doc:Automation>.
 public enum AutomationShape: String, Equatable, Hashable, Codable, CaseIterable {
     case linear
     case exponential
@@ -176,6 +203,7 @@ public enum AutomationShape: String, Equatable, Hashable, Codable, CaseIterable 
     }
 }
 
+@_documentation(visibility: internal)
 public struct AutomationPoint: Equatable, Hashable, Codable {
     public var time: MusicTimeStamp
     public var value: Double
@@ -186,6 +214,7 @@ public struct AutomationPoint: Equatable, Hashable, Codable {
     }
 }
 
+@_documentation(visibility: internal)
 public struct AutomationCurve: Equatable, Hashable, Codable {
     public var target: AutomationTarget
     public var points: [AutomationPoint]
@@ -277,15 +306,18 @@ public struct AutomationCurve: Equatable, Hashable, Codable {
 }
 
 public extension Array where Element == AutomationCurve {
+    @_documentation(visibility: internal)
     func gain(at time: MusicTimeStamp) -> Double {
         reduce(1.0) { $1.target == .volume ? $0 * $1.value(at: time) : $0 }
     }
 
+    @_documentation(visibility: internal)
     func maxGain(from: MusicTimeStamp, to: MusicTimeStamp) -> Double {
         reduce(1.0) { $1.target == .volume ? $0 * $1.maxValue(from: from, to: to) : $0 }
     }
 }
 
+@_documentation(visibility: internal)
 public enum NotationID {
     public static func of<S: StringProtocol>(_ text: S) -> UInt64 {
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
@@ -297,39 +329,67 @@ public enum NotationID {
     }
 }
 
+/// One sounding note: a pitch, a velocity, a start time and a duration in whole notes.
+///
+/// Scores usually write notes as notation strings rather than building them. See <doc:NotesRestsAndNoteSets>.
 public struct Note: Equatable, Codable, Identifiable {
+    @_documentation(visibility: internal)
     public var id: UUID = UUID()
     public var pitch: Pitch?
     public var velocity: UInt32 = 100
     public var startTime: MusicTimeStamp = 0
     public var duration: MusicTimeStamp = .whole
+    @_documentation(visibility: internal)
     public var pitchVariants: [Pitch]? = nil
+    @_documentation(visibility: internal)
     public var variantMode: NoteSetMode? = nil
+    @_documentation(visibility: internal)
     public var slides: [SlideStep]? = nil
+    @_documentation(visibility: internal)
     public var fall: Fall? = nil
+    @_documentation(visibility: internal)
     public var automation: [AutomationCurve]? = nil
+    @_documentation(visibility: internal)
     public var activity: LoopActivity? = nil
 
+    @_documentation(visibility: internal)
     public var degree: ScaleDegree? = nil
+    @_documentation(visibility: internal)
     public var scale: Scale? = nil
+    @_documentation(visibility: internal)
     public var variantDegrees: [ScaleDegree?]? = nil
 
+    @_documentation(visibility: internal)
     public var velocityChoices: ClosedRange<UInt32>? = nil
+    @_documentation(visibility: internal)
     public var durationChoices: [MusicTimeStamp]? = nil
+    @_documentation(visibility: internal)
     public var dice: DiceGate? = nil
+    @_documentation(visibility: internal)
     public var layerIndex: Int? = nil
 
+    @_documentation(visibility: internal)
     public var loop: LoopStamp? = nil
 
+    @_documentation(visibility: internal)
     public var sourceLine: Int? = nil
+    @_documentation(visibility: internal)
     public var sourceColumn: Int? = nil
+    @_documentation(visibility: internal)
     public var sourceFile: String? = nil
+    @_documentation(visibility: internal)
     public var sourceOffset: Int? = nil
+    @_documentation(visibility: internal)
     public var sourceLength: Int? = nil
+    @_documentation(visibility: internal)
     public var notationID: UInt64? = nil
+    @_documentation(visibility: internal)
     public var variantSourceOffsets: [Int]? = nil
+    @_documentation(visibility: internal)
     public var variantSourceLengths: [Int]? = nil
+    @_documentation(visibility: internal)
     public var slideSourceOffsets: [Int]? = nil
+    @_documentation(visibility: internal)
     public var slideSourceLengths: [Int]? = nil
 
     public init(pitch: Pitch?, velocity: UInt32, startTime: MusicTimeStamp, duration: MusicTimeStamp) {
@@ -362,6 +422,7 @@ public struct Note: Equatable, Codable, Identifiable {
 }
 
 public extension Note {
+    @_documentation(visibility: internal)
     func scalingSlides(from oldDuration: MusicTimeStamp, to newDuration: MusicTimeStamp) -> Note {
         guard slides != nil || fall != nil || automation != nil,
               oldDuration > 0, newDuration != oldDuration else { return self }
@@ -384,6 +445,9 @@ public extension Note {
     }
 }
 
+/// A silent note that holds its time.
+///
+/// See <doc:NotesRestsAndNoteSets>.
 public typealias Rest = Note
 extension Rest {
     public init() {
@@ -396,9 +460,15 @@ extension Rest {
     }
 }
 
+/// Pitches that take turns: a different member sounds on each pass.
+///
+/// See <doc:NotesRestsAndNoteSets>.
 public struct NoteSet {
+    @_documentation(visibility: internal)
     public let pitches: [Pitch]
+    @_documentation(visibility: internal)
     public let mode: NoteSetMode
+    @_documentation(visibility: internal)
     public let duration: MusicTimeStamp
 
     public init(_ pitches: Pitch..., duration: MusicTimeStamp = .quarter) {
@@ -423,42 +493,71 @@ public struct NoteSet {
 }
 
 public extension MusicTimeStamp {
+    @_documentation(visibility: internal)
     static let sixtyfourth = 1.0/64.0
+    @_documentation(visibility: internal)
     static let thirtysecond = 1.0/32.0
+    @_documentation(visibility: internal)
     static let sixteenth = 1.0/16.0
+    @_documentation(visibility: internal)
     static let semiquaver = 1.0/16.0
+    @_documentation(visibility: internal)
     static let eighth = 1.0/8.0
+    @_documentation(visibility: internal)
     static let quaver = 1.0/8.0
+    @_documentation(visibility: internal)
     static let quarter = 1.0/4.0
+    @_documentation(visibility: internal)
     static let crotchet = 1.0/4.0
+    @_documentation(visibility: internal)
     static let half = 1.0/2.0
+    @_documentation(visibility: internal)
     static let minim = 1.0/2.0
+    @_documentation(visibility: internal)
     static let whole = 1.0
+    @_documentation(visibility: internal)
     static let semibreve = 1.0
+    @_documentation(visibility: internal)
     static let doubleWhole = 2.0
+    @_documentation(visibility: internal)
     static let breve = 2.0
+    @_documentation(visibility: internal)
     static let longa = 4.0
+    @_documentation(visibility: internal)
     static let maxima = 8.0
 
+    @_documentation(visibility: internal)
     static let n64 = 1.0/64.0
+    @_documentation(visibility: internal)
     static let n32 = 1.0/32.0
+    @_documentation(visibility: internal)
     static let n16 = 1.0/16.0
+    @_documentation(visibility: internal)
     static let n8 = 1.0/8.0
+    @_documentation(visibility: internal)
     static let n4 = 1.0/4.0
+    @_documentation(visibility: internal)
     static let n2 = 1.0/2.0
+    @_documentation(visibility: internal)
     static let n1 = 1.0
 
+    @_documentation(visibility: internal)
     static let n8d = 1.0/8.0 * 1.5
+    @_documentation(visibility: internal)
     static let n4d = 1.0/4.0 * 1.5
+    @_documentation(visibility: internal)
     static let n2d = 1.0/2.0 * 1.5
 
+    @_documentation(visibility: internal)
     static let n8t = 1.0/8.0 * 2.0/3.0
+    @_documentation(visibility: internal)
     static let n4t = 1.0/4.0 * 2.0/3.0
 }
 
 // MARK: - Reading degrees in a key
 
 public extension Note {
+    @_documentation(visibility: internal)
     var isUnkeyed: Bool {
         guard scale == nil else { return false }
         return degree != nil
@@ -466,6 +565,7 @@ public extension Note {
             || variantDegrees?.contains(where: { $0 != nil }) == true
     }
 
+    @_documentation(visibility: internal)
     func keyed(in scale: Scale) -> Note {
         guard isUnkeyed else { return self }
         var n = self
@@ -490,5 +590,6 @@ public extension Note {
 }
 
 public extension Array where Element == Note {
+    @_documentation(visibility: internal)
     func keyed(in scale: Scale) -> [Note] { map { $0.keyed(in: scale) } }
 }

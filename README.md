@@ -48,6 +48,14 @@ start, duration and velocity, and the line and column it was written at. Pass
 `--session-json <path>` to have it written to a file instead, which leaves
 stdout free for the score's own `print(...)`.
 
+## Documentation
+
+The language reference — notation, tracks and arrangement, drums, samples,
+dice, generators, instruments, automation — is at
+**[enie.github.io/MidiDSL](https://enie.github.io/MidiDSL/documentation/mididsl/)**.
+It is built from `Sources/MidiDSL/MidiDSL.docc`, so Xcode's documentation
+window shows the same pages.
+
 ## MIDI files
 
 ```bash
@@ -112,7 +120,7 @@ Add the package to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Enie/MidiDSL.git", from: "0.1.0"),
+    .package(url: "https://github.com/Enie/MidiDSL.git", from: "0.2.0"),
 ],
 targets: [
     .target(name: "MyTarget", dependencies: [

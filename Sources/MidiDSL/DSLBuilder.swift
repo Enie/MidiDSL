@@ -1,6 +1,7 @@
 import Foundation
 
 @resultBuilder
+@_documentation(visibility: internal)
 public struct TrackArrayBuilder {
     public static func buildBlock(_ components: [Track]...) -> [Track] {
         return components.flatMap { $0 }
@@ -32,6 +33,7 @@ public struct TrackArrayBuilder {
 }
 
 @resultBuilder
+@_documentation(visibility: internal)
 public enum SectionArrayBuilder {
     public static func buildBlock(_ components: [Section]...) -> [Section] {
         let allSections = components.flatMap { $0 }
@@ -124,6 +126,7 @@ struct PendingCurve {
     }
 }
 
+@_documentation(visibility: internal)
 public struct NotationExpression {
     let notation: String
     var _velocity: UInt32? = nil
@@ -314,6 +317,7 @@ extension NotationExpression: CustomStringConvertible {
     public var description: String { notation }
 }
 
+@_documentation(visibility: internal)
 public struct JoinedNotation {
     var parts: [NotationExpression]
     var _automation: [PendingCurve] = []
@@ -369,24 +373,31 @@ public struct JoinedNotation {
     }
 }
 
+@_documentation(visibility: internal)
 public func + (lhs: NotationExpression, rhs: NotationExpression) -> JoinedNotation {
     JoinedNotation([lhs, rhs])
 }
+@_documentation(visibility: internal)
 public func + (lhs: NotationExpression, rhs: String) -> JoinedNotation {
     JoinedNotation([lhs, NotationExpression(rhs)])
 }
+@_documentation(visibility: internal)
 public func + (lhs: String, rhs: NotationExpression) -> JoinedNotation {
     JoinedNotation([NotationExpression(lhs), rhs])
 }
+@_documentation(visibility: internal)
 public func + (lhs: JoinedNotation, rhs: NotationExpression) -> JoinedNotation {
     JoinedNotation(lhs.parts + [rhs])
 }
+@_documentation(visibility: internal)
 public func + (lhs: JoinedNotation, rhs: String) -> JoinedNotation {
     JoinedNotation(lhs.parts + [NotationExpression(rhs)])
 }
+@_documentation(visibility: internal)
 public func + (lhs: NotationExpression, rhs: JoinedNotation) -> JoinedNotation {
     JoinedNotation([lhs] + rhs.parts)
 }
+@_documentation(visibility: internal)
 public func + (lhs: String, rhs: JoinedNotation) -> JoinedNotation {
     JoinedNotation([NotationExpression(lhs)] + rhs.parts)
 }
@@ -427,6 +438,7 @@ public extension String {
     }
 }
 
+@_documentation(visibility: internal)
 public struct ParseWarning: Equatable {
     public let token: String
     public let offset: Int
@@ -442,6 +454,7 @@ public struct ParseWarning: Equatable {
 }
 
 @resultBuilder
+@_documentation(visibility: internal)
 public enum SectionBuilder {
     public static var timeSignature: TimeSignature = .fourFour
     private static var barDuration: MusicTimeStamp { timeSignature.barDuration }
@@ -2192,12 +2205,3 @@ public enum SectionBuilder {
     }
 }
 
-@resultBuilder
-public enum SessionBuilder {
-    public static func buildBlock(_ tracks: Track...) -> Session {
-        let session = Session {
-            return tracks
-        }
-        return session
-    }
-}

@@ -1,5 +1,8 @@
 import Foundation
 
+/// The meter: beats per bar and the note value that gets the beat.
+///
+/// See <doc:TimeSignatures>.
 public struct TimeSignature: Equatable, Codable {
     public let beatsPerBar: Int
     public let noteValue: Int
@@ -19,18 +22,25 @@ public struct TimeSignature: Equatable, Codable {
 }
 
 public extension TimeSignature {
+    @_documentation(visibility: internal)
     var barDuration: Double { Double(beatsPerBar) / Double(noteValue) }
 
+    @_documentation(visibility: internal)
     func secondsPerBeat(tempo: Double) -> Double {
         (60.0 / tempo) * (4.0 / Double(noteValue))
     }
 
+    @_documentation(visibility: internal)
     func secondsPerBar(tempo: Double) -> Double {
         secondsPerBeat(tempo: tempo) * Double(beatsPerBar)
     }
 }
 
+/// The whole piece: its tracks, tempo, meter, form, key and seed.
+///
+/// See <doc:Sessions>.
 public struct Session: Equatable, Codable, Identifiable {
+    @_documentation(visibility: internal)
     public static func == (lhs: Session, rhs: Session) -> Bool {
         return lhs.volume == rhs.volume &&
         lhs.tempo == rhs.tempo &&
@@ -42,14 +52,23 @@ public struct Session: Equatable, Codable, Identifiable {
         lhs.tracks == rhs.tracks
     }
 
+    @_documentation(visibility: internal)
     public var id: UUID = UUID()
+    @_documentation(visibility: internal)
     public let tracks: [Track]
+    @_documentation(visibility: internal)
     public let volume: Double?
+    @_documentation(visibility: internal)
     public let tempo: Double?
+    @_documentation(visibility: internal)
     public let loopBars: Int?
+    @_documentation(visibility: internal)
     public let loops: Int?
+    @_documentation(visibility: internal)
     public let timeSignature: TimeSignature?
+    @_documentation(visibility: internal)
     public let diceSeed: Int?
+    @_documentation(visibility: internal)
     public let advisories: [SessionAdvisory]
 
     // MARK: - The pass body
@@ -209,14 +228,17 @@ public struct Session: Equatable, Codable, Identifiable {
         return copy
     }
 
+    @_documentation(visibility: internal)
     public var diceSeedValue: UInt64 {
         diceSeed.map { UInt64(bitPattern: Int64($0)) } ?? 0
     }
 
+    @_documentation(visibility: internal)
     public func replacingTracks(_ newTracks: [Track]) -> Session {
         return Session(tracks: newTracks, volume: self.volume, tempo: self.tempo, loopBars: self.loopBars, loops: self.loops, timeSignature: self.timeSignature, diceSeed: self.diceSeed, advisories: self.advisories)
     }
 
+    @_documentation(visibility: internal)
     public var effectiveLoopCount: Int {
         if let loops { return max(1, loops) }
         return Session.declaredPasses(in: tracks)

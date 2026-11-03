@@ -1,6 +1,10 @@
 import Foundation
 
+/// Chords named by Roman numerals in a key, played one after another.
+///
+/// See <doc:ProgressionsAndScales>.
 public class Progression {
+    @_documentation(visibility: internal)
     public var chords: Chords
 
     public init(_ progression: String, for pitch: Pitch, minor: Bool = false) {
@@ -10,6 +14,7 @@ public class Progression {
             .compactMap { Chord(ChordNotation($0)) }
     }
 
+    @_documentation(visibility: internal)
     public init(chords: Chords) {
         self.chords = chords
     }

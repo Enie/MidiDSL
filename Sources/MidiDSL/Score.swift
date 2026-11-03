@@ -1,5 +1,9 @@
 import Foundation
 
+/// A piece of music as a program.
+///
+/// Mark a conforming type `@main`, and its ``session`` is what the program hands over when it runs.
+/// See <doc:WhatAScoreIs>.
 public protocol Score {
     init()
     var session: Session { get }
@@ -11,7 +15,7 @@ public extension Score {
     }
 }
 
-public enum ScoreRunner {
+enum ScoreRunner {
 
     public static func run(_ build: () -> Session) {
         let arguments = CommandLine.arguments

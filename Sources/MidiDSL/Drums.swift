@@ -1,5 +1,8 @@
 import Foundation
 
+/// A General MIDI percussion key: `.kick`, `.snare`, `.closedHat`, `.ride` and the rest of the kit.
+///
+/// See <doc:Drums>.
 public struct DrumPiece: Equatable {
     public let midiKey: UInt32
 
@@ -83,19 +86,28 @@ public struct DrumPiece: Equatable {
 /// declines on both counts — it is free. In a hand-written literal,
 /// `Lane(.kick, "x... x...")` names the same piece and keeps its steps lit.
 public extension String.StringInterpolation {
+    @_documentation(visibility: internal)
     mutating func appendInterpolation(_ piece: DrumPiece) {
         appendLiteral(piece.spelling)
     }
 }
 
+/// One drum piece played from a step grid, such as `Kick("x... x...")`.
+///
+/// See <doc:Drums>.
 public struct DrumLane {
+    @_documentation(visibility: internal)
     public let piece: DrumPiece
+    @_documentation(visibility: internal)
     public let grid: String
 
+    @_documentation(visibility: internal)
     public let sample: Sample?
 
+    @_documentation(visibility: internal)
     public private(set) var volumeScale: Double = 1.0
 
+    @_documentation(visibility: internal)
     public private(set) var muted: Bool = false
 
     public init(_ piece: DrumPiece, _ grid: String) {
@@ -196,16 +208,30 @@ public struct DrumLane {
     }
 }
 
+/// A drum lane for any kit piece or sample slice, played from a step grid.
+///
+/// See <doc:Drums>.
 public func Lane(_ piece: DrumPiece, _ grid: String) -> DrumLane { DrumLane(piece, grid) }
+/// A drum lane that plays a sample slice from a step grid. See <doc:Samples>.
 public func Lane(_ sample: Sample, _ grid: String) -> DrumLane { DrumLane(sample, grid) }
+/// A kick-drum lane. See <doc:Drums>.
 public func Kick(_ grid: String) -> DrumLane { DrumLane(.kick, grid) }
+/// A snare lane. See <doc:Drums>.
 public func Snare(_ grid: String) -> DrumLane { DrumLane(.snare, grid) }
+/// A closed hi-hat lane. See <doc:Drums>.
 public func Hat(_ grid: String) -> DrumLane { DrumLane(.closedHat, grid) }
+/// An open hi-hat lane. See <doc:Drums>.
 public func OpenHat(_ grid: String) -> DrumLane { DrumLane(.openHat, grid) }
+/// A hand-clap lane. See <doc:Drums>.
 public func Clap(_ grid: String) -> DrumLane { DrumLane(.clap, grid) }
+/// A crash-cymbal lane. See <doc:Drums>.
 public func Crash(_ grid: String) -> DrumLane { DrumLane(.crash, grid) }
+/// A ride-cymbal lane. See <doc:Drums>.
 public func Ride(_ grid: String) -> DrumLane { DrumLane(.ride, grid) }
 
+/// Where a step sits in a generated grid or phrase: its bar, beat, subdivision and index.
+///
+/// See <doc:GeneratingParts>.
 public struct GridStep {
     public let bar: Int
     public let beat: Int
@@ -216,6 +242,9 @@ public struct GridStep {
     public var isDownbeat: Bool { sub == 0 }
 }
 
+/// A drum grid computed step by step instead of typed.
+///
+/// See <doc:GeneratingParts>.
 public func Grid(bars: Int, beats: Int = 4, subdivisions: Int = 4,
                  _ fill: (GridStep) -> Character) -> String {
     let bars = max(0, bars), beats = max(1, beats), subdivisions = max(1, subdivisions)
@@ -231,6 +260,9 @@ public func Grid(bars: Int, beats: Int = 4, subdivisions: Int = 4,
     }.joined(separator: " | ")
 }
 
+/// A General MIDI drum kit, chosen by program number.
+///
+/// See <doc:Drums>.
 public enum DrumKit: Int, Codable {
     case standard = 0
     case room = 8
