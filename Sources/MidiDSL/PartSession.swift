@@ -79,14 +79,12 @@ public enum PartSession {
 
     // MARK: - A sound rather than music
 
-    public static func of(_ patch: SynthPatch) -> Session {
-        let note = Note(pitch: referencePitch(for: patch), velocity: 100, duration: .whole)
+    public static func of(_ instrument: Instrument) -> Session {
+        let note = Note(pitch: referencePitch(for: instrument), velocity: 100, duration: .whole)
         return Session {
-            Track(trackName, instrument: patch) { unplaceable(Section { note }) }
+            Track(trackName, instrument: instrument) { unplaceable(Section { note }) }
         }
     }
-
-    public static func of(_ synth: Synth) -> Session { of(synth.build()) }
 
     // MARK: - Nothing to play
 
@@ -121,12 +119,12 @@ public enum PartSession {
 
     static let generatedFile = "MidiDSL/PartSession.swift"
 
-    private static func referencePitch(for patch: SynthPatch) -> Pitch {
-        if let kit = patch.sampleKit {
+    private static func referencePitch(for instrument: Instrument) -> Pitch {
+        if let kit = instrument.sampleKit {
             if kit.chromatic { return kit.rootKey }
             if !kit.slices.isEmpty { return kit.baseKey }
             if !kit.laneSlices.isEmpty { return kit.laneBaseKey }
         }
-        return patch.sampler?.percussion == true ? 36 : 60
+        return instrument.percussion ? 36 : 60
     }
 }

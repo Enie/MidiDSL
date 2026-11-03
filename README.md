@@ -22,7 +22,7 @@ struct HelloScore: Score {
             }
         }
 
-        Track("Drums", instrument: Synth.drums(.standard)) {
+        Track("Drums", instrument: .drums(.standard)) {
             Loop(bars: 1, times: 4) { _ in
                 Section {
                     Kick("x... x... x... x...")

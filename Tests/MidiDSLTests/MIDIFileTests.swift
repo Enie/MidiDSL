@@ -58,6 +58,46 @@ final class MIDIFileStructureTests: XCTestCase {
         XCTAssertTrue(tenth.contains(0x9A), "the tenth track goes to channel 11, not the drum channel")
     }
 
+    func testAnInstrumentOpensItsTrackWithAProgramChange() {
+        let parts = chunks(MIDIFile.data(for: Session {
+            Track("bass", instrument: .generalMIDI(33)) { Section { "C3" } }
+        }))
+        let body = Array(parts[2].1)
+        let programAt = body.firstRange(of: [0xC0, 33])
+        XCTAssertNotNil(programAt, "program 33 on the track's channel")
+        XCTAssertLessThan(programAt!.lowerBound, body.firstIndex(of: 0x90)!, "before the first note")
+    }
+
+    func testABankIsSelectedBeforeTheProgram() {
+        let events = MIDIFile.trackEvents(
+            for: Track("strings", instrument: .generalMIDI(48, bank: 130)) { Section { "C" } },
+            loops: 1, loopTicks: 1920, tempo: 120)
+        XCTAssertEqual(Array(events.prefix(3).map(\.kind)), [
+            .controller(number: 0, value: 1),
+            .controller(number: 32, value: 2),
+            .programChange(program: 48),
+        ])
+    }
+
+    func testATrackWithoutAnInstrumentSendsNoProgram() {
+        let events = MIDIFile.trackEvents(for: Track("keys") { Section { "C" } },
+                                          loops: 1, loopTicks: 1920, tempo: 120)
+        XCTAssertFalse(events.contains { if case .programChange = $0.kind { true } else { false } })
+    }
+
+    func testDrumsGoOnChannelTenAndTheOthersCloseAroundThem() {
+        let parts = chunks(MIDIFile.data(for: Session {
+            Track("keys") { Section { "C" } }
+            Track("drums", instrument: .drums(.tr808)) { Section { Kick("x...") } }
+            Track("bass") { Section { "C3" } }
+        }))
+        XCTAssertNotNil(Array(parts[2].1).firstIndex(of: 0x90), "keys on channel 1")
+        XCTAssertNotNil(Array(parts[3].1).firstRange(of: [0xC9, UInt8(DrumKit.tr808.rawValue)]),
+                        "the kit is chosen on channel 10")
+        XCTAssertNotNil(Array(parts[3].1).firstIndex(of: 0x99), "drums play on channel 10")
+        XCTAssertNotNil(Array(parts[4].1).firstIndex(of: 0x91), "bass takes channel 2")
+    }
+
     func testLoopsDefaultsToTheSessionsForm() {
         let form = Session { Track("t") { Section { "C D E F" } } }.loops(3)
         let noteOns = { (data: Data) in data.filter { $0 == 0x90 }.count }

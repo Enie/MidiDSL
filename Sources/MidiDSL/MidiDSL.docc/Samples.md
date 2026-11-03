@@ -4,7 +4,7 @@ Audio files, slices of them, and kits made of slices.
 
 ## Overview
 
-A Sample is an audio file on disk. Slice it, shape it, and hand it to a track as its instrument — the slices then sound through the notation, drum lanes, dice, arrangement and exporters that already exist, because a sample voice is the oscillator voice reading a buffer rather than a second engine. The patch's envelope, filter, reverb and volume all apply, and so does every .automate(...) curve that moves them.
+A Sample is an audio file on disk. Slice it, shape it, and play it from drum lanes or as a statement of its own — the slices then sound through the notation, lanes, dice and arrangement that already exist. Each slice claims a key on the track, which is what a MIDI file carries; playing the audio is the host's part, and Componium does it with the same voice its synthesizer uses, so the track's envelope, filter, reverb and volume all apply.
 
 A slice of a sample is still a sample, so every modifier works at either level. Files are found beside the score first and in a "<Score> samples" folder next to it second; an absolute or ~ path is taken as written.
 
@@ -65,10 +65,10 @@ Every piece names the same file, so sixteen slices are one decode and one copy o
 ```swift
 let chops = amen.slices(16)
 
-Track("break", instrument: Synth.kit(chops)) {
+Track("break") {
     Section {
-        Lane(.slot(0), "x... .... x... ....")
-        Lane(.slot(4), ".... x... .... x...")
+        Lane(chops[0], "x... .... x... ....")
+        Lane(chops[4], ".... x... .... x...")
     }
 }
 ```
@@ -113,7 +113,7 @@ tune(_ semitones: Double)
 
 - term `semitones`: Transposition on top of whatever key plays the slice. Fractional values work — 0.2 is a fifth of a semitone.
 
-Transpose the slice. On a kit this offsets that one chop; on a Synth.sample track it offsets the whole keyboard.
+Transpose the slice. On a kit this offsets that one chop; on a sample played across the keyboard it offsets all of it.
 
 ```swift
 let sub = kick.tune(-5)
@@ -194,47 +194,9 @@ let metal = snare.ringMod(220)
 
 ## Playing them
 
-### Synth.kit()
+### A kit in Componium
 
-```swift
-Synth.kit(_ slices: [Sample], from key: Pitch = 36)
-```
-
-- term `slices`: The slices, in order. Slice n lands on key n counting up from `from`.
-- term `from`: The key slot 0 sounds on. 36 is the GM kick, which is where DrumPiece.slot(n) counts from — so the two line up by construction and a chopped break plays through the drum lanes.
-
-A kit of audio files: each slice on its own key, so everything written for drums works — step grids, Grid(...), the dice ? and 1–9 odds, .volume() and .mute() per lane.
-
-A key with no slice on it is silent rather than falling through to the oscillators, which is also what a kit whose file could not be found does.
-
-```swift
-Track("break", instrument: Synth.kit(amen.slices(16))) {
-    Section {
-        Lane(.slot(0), "x... .... x... ....")
-        Lane(.slot(4), ".... x... .... x...")
-        Lane(.slot(7), "..?. ..?. ..?. ..?.")
-    }
-}
-```
-
-### Synth.sample()
-
-```swift
-Synth.sample(_ sample: Sample, root: Pitch = 48)
-```
-
-- term `sample`: The slice to play. One slice across the whole keyboard, repitched.
-- term `root`: The key it plays at its written speed. Middle C by default; every other key is repitched from it.
-
-One sample played chromatically by ordinary notation — the keyboard sampler to Synth.kit's drum machine. Degrees, chords, slides and note sets all work, because nothing downstream knows the sound came from a file.
-
-```swift
-let stab = Sample("stab.wav").fade(out: 0.05)
-
-Track("keys", instrument: Synth.sample(stab, root: .C4)) {
-    Section { "C5 - E5 G5 | [C5 E5 G5] - - -" }
-}
-```
+Componium also plays a list of slices as a kit of its own, one slice per key from the GM kick up, so `DrumPiece.slot(n)` lanes play slice n; and one sample chromatically, repitched across the keyboard. Those are its `Synth.kit(_:from:)` and `Synth.sample(_:root:)`, in a score that imports `Componium`.
 
 ### Lane() with a slice
 
@@ -318,7 +280,7 @@ DrumPiece.slot(_ n: Int)
 
 - term `n`: Which slice of the kit, counting from 0 at the kit's base key.
 
-Slot n of a sample kit. The same key space the named pieces use, read two ways: .slot(0) is where Synth.kit's first slice lands and .kick is where a GM kit's bass drum does.
+Slot n of a sample kit. The same key space the named pieces use, read two ways: .slot(0) is where a kit's first slice lands and .kick is where a GM kit's bass drum does.
 
 ```swift
 Lane(.slot(3), "..x. ..x.")
@@ -326,18 +288,18 @@ Lane(.slot(3), "..x. ..x.")
 
 ## What a sample track obeys
 
-### Automation and the patch
+### Automation and MIDI
 
-A sample voice is the oscillator voice with a buffer where its oscillators would be, so the patch it sits in still owns the envelope, the filter, the reverb and the volume — and .automate(.cutoff, …), .automate(.resonance, …), .automate(.reverb, …) and .automate(.volume, …) all sweep a break exactly as they sweep a synth.
+A slice is notes on a key, so every .automate(...) curve applies to a sample track as to any other, and a host that plays the audio plays the curves with it.
 
 What a slice's own insert chain does is not automatable: the curve targets are track-wide or per-voice volume, and a per-slice lane would be a fourth kind of curve. .gain() multiplies with a .volume curve, so fades already move.
 
-A MIDI export carries the notes on the kit's keys, because a MIDI file cannot carry audio. A WAV export renders the samples as you hear them.
+A MIDI export carries the notes on the kit's keys, because a MIDI file cannot carry audio.
 
 ```swift
-Track("break", instrument: Synth.kit(chops)) {
+Track("break") {
     Section {
-        Lane(.slot(0), "x... x... x... x...")
+        Lane(amen.slice(from: 0, to: 0.21), "x... x... x... x...")
     }
     .automate(.cutoff, over: [0: 400, 1: 12000], curve: .exponential)
 }

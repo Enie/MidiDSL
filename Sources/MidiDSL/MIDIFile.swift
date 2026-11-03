@@ -1,8 +1,12 @@
 import Foundation
 
 /// A `Session` as a Standard MIDI File (format 1, 480 ticks per quarter): a conductor track
-/// with the tempo and meter, then one track per `Track` on its own channel (skipping 10, the
-/// GM drum channel). Time is musical, so the file is the same whatever the tempo.
+/// with the tempo and meter, then one track per `Track` on its own channel. Time is musical, so
+/// the file is the same whatever the tempo.
+///
+/// A track's ``Instrument`` opens it: a program change (after a bank select, when the bank is
+/// not 0) names the General MIDI sound, and a drum track is written on channel 10, where every
+/// General MIDI player keeps its kit. The other tracks take the remaining channels in order.
 ///
 /// Every pass is resolved the way a player hears it: note sets, dice, `.active(...)` gates,
 /// shuffled sections, mutes, track and session volume. Slides become pitch-bend curves (a
@@ -39,17 +43,29 @@ public enum MIDIFile {
 
         data.append(conductorChunk(for: session, endTick: loopTicks * loops))
 
-        var channel: UInt8 = 0
-        for track in session.tracks {
+        for (track, channel) in zip(session.tracks, channels(for: session.tracks)) {
             data.append(noteChunk(for: track, channel: channel, loops: loops,
                                   loopTicks: loopTicks, tempo: tempo,
                                   seed: session.diceSeedValue,
                                   masterVolume: session.volume ?? 1.0))
-            channel += 1
-            if channel == 9 { channel += 1 }
-            if channel > 15 { channel = 0 }
         }
         return data
+    }
+
+    static let drumChannel: UInt8 = 9
+
+    /// Each track's channel: 10 (index 9) for drums, the others in order around it, wrapping
+    /// after sixteen.
+    static func channels(for tracks: [Track]) -> [UInt8] {
+        var next: UInt8 = 0
+        return tracks.map { track in
+            if track.instrument?.percussion == true { return drumChannel }
+            let channel = next
+            next += 1
+            if next == drumChannel { next += 1 }
+            if next > 15 { next = 0 }
+            return channel
+        }
     }
 
     // MARK: - Musical time
@@ -114,6 +130,7 @@ public enum MIDIFile {
             case noteOn(note: UInt8, velocity: UInt8)
             case noteOff(note: UInt8)
             case controller(number: UInt8, value: UInt8)
+            case programChange(program: UInt8)
             case pitchBend(value: UInt16)
         }
         public let tick: Int
@@ -261,6 +278,14 @@ public enum MIDIFile {
             pending.append((tick, priority, pending.count, kind))
         }
 
+        if let instrument = track.instrument, let program = instrument.program {
+            if instrument.bank != 0 {
+                emit(0, 0, .controller(number: 0, value: UInt8((instrument.bank >> 7) & 0x7F)))
+                emit(0, 0, .controller(number: 32, value: UInt8(instrument.bank & 0x7F)))
+            }
+            emit(0, 1, .programChange(program: UInt8(min(max(program, 0), 127))))
+        }
+
         if !bendUsers.isEmpty {
             for (controller, value) in MIDIRamp.bendRangeRPN(range: UInt8(bendRange), closeRPN: false) {
                 emit(0, 2, .controller(number: controller, value: value))
@@ -401,6 +426,8 @@ public enum MIDIFile {
                 events.append(contentsOf: [0x80 | ch, note & 0x7F, 0])
             case .controller(let number, let value):
                 events.append(contentsOf: [0xB0 | ch, number & 0x7F, value & 0x7F])
+            case .programChange(let program):
+                events.append(contentsOf: [0xC0 | ch, program & 0x7F])
             case .pitchBend(let value):
                 events.append(contentsOf: [0xE0 | ch, UInt8(value & 0x7F), UInt8((value >> 7) & 0x7F)])
             }

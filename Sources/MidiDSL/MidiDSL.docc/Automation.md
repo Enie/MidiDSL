@@ -88,7 +88,7 @@ effect name, parameter name → value 0…1 across the parameter's range
 A parameter of a plugin in the track's effect chain — the effect named as its .effect("…") call names it, the parameter by the name the plugin shows (case doesn't matter). The value is 0…1 across whatever range the plugin keeps, so 0.5 is halfway whether it counts in percent, decibels or seconds. Track-wide, like the filter: a curve on the track is cut into each section's window, so .hold switches a reverb in and out section by section. A stop or pause puts the preset's own value back. A name that doesn't match is reported once in the console, with what the plugin does have.
 
 ```swift
-Track("Lead", instrument: Synth.audioUnit("Voltstring").effect("Raum", preset: "Lead Raum")) { … }
+Track("Lead") { … }   // in Componium: instrument: Synth.audioUnit("Voltstring").effect("Raum")
     .automate(.effect("Raum", parameter: "Mix"), bars: [0: 0, 8: 0.5, 16: 0], curve: .hold)
 ```
 

@@ -837,12 +837,6 @@ class DrumLaneTests: XCTestCase {
         XCTAssertEqual(notes.last?.pitch, nil)
         XCTAssertEqual(notes.map { $0.startTime + $0.duration }.max(), 1.0)
     }
-
-    func testDrumsPatchIsPercussion() {
-        let patch = Synth.drums(.tr808).build()
-        XCTAssertEqual(patch.sampler?.percussion, true)
-        XCTAssertEqual(patch.sampler?.program, DrumKit.tr808.rawValue)
-    }
 }
 
 // MARK: - A kit piece written into notation
@@ -2607,108 +2601,6 @@ class SessionEqualityTests: XCTestCase {
         let a = Session { Track(name: "piano") { Section { "C" } } }
         let b = Session { Track(name: "organ") { Section { "C" } } }
         XCTAssertNotEqual(a, b)
-    }
-}
-
-class SamplerPatchTests: XCTestCase {
-    func testSampledBuilderSetsConfig() {
-        let patch = Synth.sampled("strings", soundFont: "Orchestra.sf2", program: 48, bank: 2).build()
-        XCTAssertEqual(patch.name, "strings")
-        XCTAssertEqual(patch.sampler, SamplerConfig(soundFont: "Orchestra.sf2", program: 48, bank: 2))
-    }
-
-    func testPianoAndGuitarPresetsAreSampled() {
-        let piano = Synth.piano().build()
-        XCTAssertEqual(piano.sampler?.program, 0)
-        XCTAssertNil(piano.sampler?.soundFont)
-        XCTAssertTrue(piano.reverb.enabled)
-
-        let guitar = Synth.acousticGuitar().build()
-        XCTAssertEqual(guitar.sampler?.program, 25)
-    }
-
-    func testOscillatorPresetsHaveNoSampler() {
-        XCTAssertNil(Synth.guitar().build().sampler)
-        XCTAssertNil(Synth.named("plain").build().sampler)
-    }
-
-    func testProgramIsClampedToMIDIRange() {
-        XCTAssertEqual(SamplerConfig(program: 300).program, 127)
-        XCTAssertEqual(SamplerConfig(program: -3).program, 0)
-    }
-
-    func testSamplerConfigSurvivesCodableRoundtrip() throws {
-        let patch = Synth.sampled("piano", program: 0).reverb(enabled: true, mix: 0.2).build()
-        let data = try JSONEncoder().encode(patch)
-        let decoded = try JSONDecoder().decode(SynthPatch.self, from: data)
-        XCTAssertEqual(decoded, patch)
-        XCTAssertEqual(decoded.sampler, patch.sampler)
-    }
-
-    func testPatchWithoutSamplerKeyStillDecodes() throws {
-        let legacy = Synth.named("old").build()
-        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as! [String: Any]
-        json.removeValue(forKey: "sampler")
-        let data = try JSONSerialization.data(withJSONObject: json)
-        let decoded = try JSONDecoder().decode(SynthPatch.self, from: data)
-        XCTAssertNil(decoded.sampler)
-    }
-
-    func testSamplerChangeBreaksPatchEquality() {
-        XCTAssertNotEqual(Synth.piano().build(), Synth.named("piano").reverb(enabled: true, mix: 0.2).volume(0.85).build())
-        XCTAssertNotEqual(Synth.sampled("x", program: 0).build(), Synth.sampled("x", program: 25).build())
-        XCTAssertEqual(Synth.piano().build(), Synth.piano().build())
-    }
-}
-
-class AudioUnitPatchTests: XCTestCase {
-    func testAudioUnitBuilderSetsConfig() {
-        let patch = Synth.audioUnit("BBC Symphony Orchestra", preset: "Strings").build()
-        XCTAssertEqual(patch.name, "BBC Symphony Orchestra")
-        XCTAssertEqual(patch.audioUnit, AudioUnitConfig(name: "BBC Symphony Orchestra", preset: "Strings"))
-        XCTAssertNil(patch.sampler)
-    }
-
-    func testOscillatorAndSampledPresetsHaveNoAudioUnit() {
-        XCTAssertNil(Synth.guitar().build().audioUnit)
-        XCTAssertNil(Synth.piano().build().audioUnit)
-    }
-
-    func testAudioUnitConfigSurvivesCodableRoundtrip() throws {
-        let patch = Synth.audioUnit("Cardinal Synth").volume(0.7).build()
-        let data = try JSONEncoder().encode(patch)
-        let decoded = try JSONDecoder().decode(SynthPatch.self, from: data)
-        XCTAssertEqual(decoded, patch)
-        XCTAssertEqual(decoded.audioUnit, patch.audioUnit)
-    }
-
-    func testPatchWithoutAudioUnitKeyStillDecodes() throws {
-        let legacy = Synth.named("old").build()
-        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as! [String: Any]
-        json.removeValue(forKey: "audioUnit")
-        let data = try JSONSerialization.data(withJSONObject: json)
-        let decoded = try JSONDecoder().decode(SynthPatch.self, from: data)
-        XCTAssertNil(decoded.audioUnit)
-    }
-
-    func testEffectsChainInTheOrderWritten() throws {
-        let patch = Synth.audioUnit("Voltstring").effect("Amp", preset: "Crunch").effect("AUDelay").build()
-        XCTAssertEqual(patch.effects, [AudioUnitConfig(name: "Amp", preset: "Crunch"), AudioUnitConfig(name: "AUDelay")])
-        XCTAssertNil(Synth.audioUnit("Voltstring").build().effects)
-        XCTAssertEqual(try JSONDecoder().decode(SynthPatch.self, from: JSONEncoder().encode(patch)), patch)
-    }
-
-    func testAnEffectChangeBreaksPatchEquality() {
-        let plain = Synth.audioUnit("a").build()
-        XCTAssertNotEqual(plain, Synth.audioUnit("a").effect("x").build())
-        XCTAssertNotEqual(Synth.audioUnit("a").effect("x").build(), Synth.audioUnit("a").effect("x", preset: "p").build())
-    }
-
-    func testAudioUnitChangeBreaksPatchEquality() {
-        XCTAssertNotEqual(Synth.audioUnit("a").build(), Synth.audioUnit("b").build())
-        XCTAssertNotEqual(Synth.audioUnit("a").build(), Synth.audioUnit("a", preset: "p").build())
-        XCTAssertNotEqual(Synth.audioUnit("a").build(), Synth.named("a").build())
-        XCTAssertEqual(Synth.audioUnit("a").build(), Synth.audioUnit("a").build())
     }
 }
 
@@ -5561,55 +5453,6 @@ final class SampleTests: XCTestCase {
             .bitCrush(bits: 8, rate: 8000)
         let data = try JSONEncoder().encode(written)
         XCTAssertEqual(try JSONDecoder().decode(Sample.self, from: data), written)
-    }
-}
-
-final class SampleKitTests: XCTestCase {
-
-    func testKitLandsSlicesOnConsecutiveKeysFromTheGMKick() {
-        let patch = Synth.kit(Sample("amen.wav").slices(4)).build()
-        let kit = try? XCTUnwrap(patch.sampleKit)
-        XCTAssertEqual(kit?.slices.count, 4)
-        XCTAssertEqual(kit?.baseKey, 36)
-        XCTAssertEqual(kit?.chromatic, false)
-    }
-
-    func testSlotZeroIsTheKitsBaseKey() {
-        let patch = Synth.kit(Sample("amen.wav").slices(4)).build()
-        XCTAssertEqual(DrumPiece.slot(0).midiKey, patch.sampleKit?.baseKey)
-        XCTAssertEqual(DrumPiece.slot(3).midiKey, (patch.sampleKit?.baseKey ?? 0) + 3)
-    }
-
-    func testASampleTrackIsChromaticAroundItsRoot() {
-        let patch = Synth.sample(Sample("hit.wav"), root: .C4).build()
-        XCTAssertEqual(patch.sampleKit?.chromatic, true)
-        XCTAssertEqual(patch.sampleKit?.rootKey, Pitch.C4)
-        XCTAssertEqual(patch.sampleKit?.slices.count, 1)
-    }
-
-    func testAKitAttacksInstantly() {
-        let patch = Synth.kit([Sample("a.wav")]).build()
-        XCTAssertEqual(patch.envelope.attack, 0)
-        XCTAssertEqual(patch.envelope.sustain, 1.0)
-    }
-
-    func testEditingASliceBreaksPatchEquality() {
-        let a = Synth.kit([Sample("a.wav").gain(1.0)]).build()
-        let b = Synth.kit([Sample("a.wav").gain(0.5)]).build()
-        XCTAssertNotEqual(a, b)
-        XCTAssertEqual(a, Synth.kit([Sample("a.wav").gain(1.0)]).build())
-    }
-
-    func testAKitPatchSurvivesTheJSONBoundary() throws {
-        let patch = Synth.kit(Sample("amen.wav").slices(8), from: 60).build()
-        let data = try JSONEncoder().encode(patch)
-        XCTAssertEqual(try JSONDecoder().decode(SynthPatch.self, from: data), patch)
-    }
-
-    func testAKitNamesNeitherASoundFontNorAPlugin() {
-        let patch = Synth.kit([Sample("a.wav")]).build()
-        XCTAssertNil(patch.sampler)
-        XCTAssertNil(patch.audioUnit)
     }
 }
 

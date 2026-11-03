@@ -150,7 +150,7 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     case resonance
     case reverb
     case cc(Int)
-    /// A parameter of a hosted effect in the track's chain (`Synth.effect(_:preset:)`), named by the
+    /// A parameter of an effect plugin the host runs on the track, named by the
     /// effect as it is written there and by the parameter's display name. The value is 0…1 across
     /// the parameter's own range, whatever unit the plugin keeps it in.
     case effect(String, parameter: String)

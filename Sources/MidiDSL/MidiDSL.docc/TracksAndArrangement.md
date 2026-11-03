@@ -26,20 +26,20 @@ Track(name: "melody") { … }   // the same thing
 ### Track
 
 ```swift
-Track(_ name: String, instrument: Synth) { Section... }
+Track(_ name: String, instrument: Instrument) { Section... }
 ```
 
 - term `name`: What the track is called — see above.
-- term `instrument`: What plays it: the oscillator engine, a sampled preset, an installed AU plugin, or audio files. Left out, the track gets the default synth. Both a Synth builder and a built SynthPatch are accepted, so the trailing .build() is optional — Synth.kit(chops) already reads finished.
+- term `instrument`: What plays it: a General MIDI program, or a drum kit on channel 10. Left out, a MIDI file sends no program and the player keeps its default. See <doc:Instruments>.
 
-A track with a sound of its own. The parameter is called instrument rather than synthPatch because only one of the four things it can hold is a synth.
+A track with a sound of its own.
 
 ```swift
-Track("bass", instrument: Synth.bass()) { … }
-Track("break", instrument: Synth.kit(chops)) { … }
+Track("bass", instrument: .generalMIDI(33)) { … }
+Track("drums", instrument: .drums(.tr808)) { … }
 
-// a patch named once and shared reads the same way
-let keys = Synth.piano().build()
+// an instrument named once and shared reads the same way
+let keys = Instrument.generalMIDI(4)
 Track("keys", instrument: keys) { … }
 ```
 
@@ -48,17 +48,15 @@ Track("keys", instrument: keys) { … }
 ### .instrument()
 
 ```swift
-instrument(_ patch: SynthPatch) -> Track / instrument(_ synth: Synth) -> Track
+instrument(_ instrument: Instrument) -> Track
 ```
 
-- term `patch`: A built patch — the same value the instrument: parameter takes, applied after the fact.
-- term `synth`: A Synth builder, taken as it stands: the overload that makes the trailing .build() optional.
+- term `instrument`: The same value the instrument: parameter takes, applied after the fact.
 
 Gives a track its sound after the block rather than in the header — the modifier twin of the instrument: parameter.
 
 ```swift
-Track("lead") { … }.instrument(Synth.lead())
-Track("keys") { … }.instrument(builtPatch)
+Track("lead") { … }.instrument(.generalMIDI(81))
 ```
 
 ### .volume()
@@ -323,7 +321,7 @@ Section { Section { … }.active(…) … }
 A Section nested inside a Section {} block is a layer like any other — and with .active(…) it becomes a per-pass alternative. Gated variants share one time window (the longest sets the section's length), so a single track can play different material on different passes — verse riff early, chorus strums later — without one track per variant. All gates compose: the note sounds only if its variant, its section and its track are active on the pass.
 
 ```swift
-Track(name: "guitar", instrument: g) {
+Track(name: "guitar") {
     Section {
         Section { "D3A3E4F#4 C#5 - A4" }.active(loops: [0, 1])
         Section { "[Dmaj7 9]~0.05 - - -" }.active(loops: 2...)

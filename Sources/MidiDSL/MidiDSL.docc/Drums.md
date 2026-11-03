@@ -4,7 +4,7 @@ Step-grid lanes on General MIDI drum keys.
 
 ## Overview
 
-Drum grooves are written as step-sequencer lanes: one lane per kit piece, one character per step. The lanes in a Section are parallel layers over the same bar grid. Put them on a track whose patch is Synth.drums(...) — the General MIDI percussion bank, where every key is a kit piece and the kit itself is chosen per patch.
+Drum grooves are written as step-sequencer lanes: one lane per kit piece, one character per step. The lanes in a Section are parallel layers over the same bar grid. Put them on a track whose instrument is .drums(...) — the General MIDI percussion channel, where every key is a kit piece and the kit itself is chosen per track.
 
 ## Lanes
 
@@ -19,7 +19,7 @@ Kick(_ grid: String) …
 One rhythm layer on the everyday kit piece the name says. The grid reads like a drum machine: x hit, X accent, o ghost note, . (or -) rest. Spaces just group steps; | separates bars. Each bar's step characters divide it evenly — 16 characters are sixteenths, 8 are eighths; a grid with no | is one bar.
 
 ```swift
-Track(name: "drums", instrument: Synth.drums().build()) {
+Track(name: "drums", instrument: .drums()) {
     Section {
         Kick( "x... .... x.x. ....")
         Snare(".... x..o .... x...")
@@ -85,7 +85,7 @@ automate(_ target: AutomationTarget, over breakpoints: [Double: Double], curve: 
 - term `over`: time: value, with the time as a fraction of this lane's own written grid — 0 its first step, 1 the end of its last bar, trailing rests included. at:, bars: and beats: are the other three spellings, exactly as on a section.
 - term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
 
-Moves a parameter over this lane — a hat that swells across the                     bar, a filter opening under the groove. .volume is the one that                     is genuinely this lane's: it is sliced onto this lane's own hits,                     so one voice of a groove swells while the others hold. It is the                     moving twin of .volume(level) — that one scales the lane's                     velocities once, this one draws them over time — and where both                     are written they multiply. Every other target moves something the                     whole track shares (one filter, one reverb node, one MIDI                     channel), so .cutoff written on the hats sweeps the kick with it,                     and two lanes moving the same target is a contest the                     later-written one wins. One caveat that is not this modifier's                     own: a per-voice curve reaches a sampled track — which                     Synth.drums() is — as CC 11, and CC is per-channel, so on a GM                     kit the most recently faded hit owns the expression for all of                     them. On sample lanes (Lane(chop, "x...")), which play our own                     voices, the curve is per-hit as written.
+Moves a parameter over this lane — a hat that swells across the                     bar, a filter opening under the groove. .volume is the one that                     is genuinely this lane's: it is sliced onto this lane's own hits,                     so one voice of a groove swells while the others hold. It is the                     moving twin of .volume(level) — that one scales the lane's                     velocities once, this one draws them over time — and where both                     are written they multiply. Every other target moves something the                     whole track shares (one filter, one reverb node, one MIDI                     channel), so .cutoff written on the hats sweeps the kick with it,                     and two lanes moving the same target is a contest the                     later-written one wins. One caveat that is not this modifier's                     own: a per-voice curve reaches a General MIDI kit as CC 11, and CC is per-channel, so on a GM                     kit the most recently faded hit owns the expression for all of                     them. On sample lanes (Lane(chop, "x...")), which play our own                     voices, the curve is per-hit as written.
 
 ```swift
 Hat("x.x. x.x. x.x. x.x.").automate(.volume, over: [0: 0.3, 1: 1.0])
@@ -128,17 +128,16 @@ DrumPiece.slot(3).spelling   // "D#3"
 
 ## Kits
 
-### Synth.drums()
+### Instrument.drums()
 
 ```swift
-drums(_ kit: DrumKit = .standard, soundFont: String? = nil)
+Instrument.drums(_ kit: DrumKit = .standard)
 ```
 
-- term `kit`: Which GM percussion program the whole track plays — .standard, .room, .power, .electronic, .tr808, .jazz, .brush, .orchestra. The kit is the program; each lane's piece is the key.
-- term `soundFont`: Path to a SoundFont whose percussion bank to load instead of the system GM one. Left nil, the system bank is used.
+- term `kit`: Which General MIDI kit the whole track plays — .standard, .room, .power, .electronic, .tr808, .jazz, .brush, .orchestra. The kit is the program; each lane's piece is the key.
 
-Sampled drum kit from the General MIDI percussion bank. Kits: .standard, .room, .power, .electronic, .tr808, .jazz, .brush, .orchestra. Pass a SoundFont path to use its percussion bank instead. Oscillator, envelope and filter settings don't apply; reverb and volume do. Plain notes on GM keys (36 kick, 38 snare, 42 closed hat…) play through the same kit.
+A drum track: written on channel 10, where every General MIDI player keeps its kit, with the kit chosen by a program change. Plain notes on GM keys (36 kick, 38 snare, 42 closed hat…) play through the same kit.
 
 ```swift
-Synth.drums(.tr808).build()
+Track("drums", instrument: .drums(.tr808)) { … }
 ```

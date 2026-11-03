@@ -68,7 +68,7 @@ public struct Track: Equatable, Codable, Identifiable {
     @_documentation(visibility: internal)
     public let sections: [Section]
     @_documentation(visibility: internal)
-    public let instrument: SynthPatch?
+    public let instrument: Instrument?
     @_documentation(visibility: internal)
     public let volume: Double?
     @_documentation(visibility: internal)
@@ -92,26 +92,25 @@ public struct Track: Equatable, Codable, Identifiable {
         self.init(name: name, content)
     }
 
-    private static func adopting(_ claimed: [Sample], into patch: SynthPatch?,
-                                 trackName: String) -> SynthPatch? {
-        guard !claimed.isEmpty else { return patch }
-        if let displaced = patch?.sampler != nil ? "sampled instrument"
-                         : (patch?.audioUnit != nil ? "plugin" : nil) {
+    private static func adopting(_ claimed: [Sample], into instrument: Instrument?,
+                                 trackName: String) -> Instrument? {
+        guard !claimed.isEmpty else { return instrument }
+        if let displaced = instrument?.sound?.replacedBySamples {
             ScoreAdvisories.note(SessionAdvisory(message:
                 "Track \"\(trackName)\" plays samples, so its \(displaced) is not "
                 + "sounding — a track has one instrument. Put the samples on a track of "
                 + "their own, or write the other sound's pieces as slices too."))
         }
-        let patch = patch ?? Synth.kit([]).build()
-        let existing = patch.sampleKit
-        patch.sampleKit = SampleKitConfig(
+        var adopted = instrument ?? Instrument(name: "kit")
+        let existing = adopted.sampleKit
+        adopted.sampleKit = SampleKitConfig(
             slices: existing?.slices ?? [],
             baseKey: existing?.baseKey ?? 36,
             chromatic: existing?.chromatic ?? false,
             rootKey: existing?.rootKey ?? 48,
             laneSlices: claimed,
             laneBaseKey: existing?.laneBaseKey ?? SampleKitConfig.laneBase)
-        return patch
+        return adopted
     }
 
     @_documentation(visibility: internal)
@@ -126,13 +125,13 @@ public struct Track: Equatable, Codable, Identifiable {
         self.muted = nil
     }
 
-    public init(_ name: String, instrument: SynthPatch,
+    public init(_ name: String, instrument: Instrument,
                 @SectionArrayBuilder _ content: () -> [Section]) {
         self.init(name: name, instrument: instrument, content)
     }
 
     @_documentation(visibility: internal)
-    public init(name: String, instrument: SynthPatch,
+    public init(name: String, instrument: Instrument,
                 @SectionArrayBuilder _ content: () -> [Section]) {
         self.name = name
         self.sections = content()
@@ -144,25 +143,12 @@ public struct Track: Equatable, Codable, Identifiable {
         self.muted = nil
     }
 
-    public init(_ name: String, instrument: Synth,
-                @SectionArrayBuilder _ content: () -> [Section]) {
-        self.init(name: name, instrument: instrument.build(), content)
-    }
-
-    @_documentation(visibility: internal)
-    public init(name: String, instrument: Synth,
-                @SectionArrayBuilder _ content: () -> [Section]) {
-        self.init(name: name, instrument: instrument.build(), content)
-    }
-
     public func tempo(_ tempo: Double) -> Track {
         return Track.__create(name: name, sections: sections.map { $0.tempo(tempo) }, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }
 
-    public func instrument(_ synth: Synth) -> Track { instrument(synth.build()) }
-
-    public func instrument(_ patch: SynthPatch) -> Track {
-        return Track.__create(name: name, sections: sections, instrument: patch, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
+    public func instrument(_ instrument: Instrument) -> Track {
+        return Track.__create(name: name, sections: sections, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }
 
     public func volume(_ level: Double) -> Track {
@@ -303,11 +289,11 @@ public struct Track: Equatable, Codable, Identifiable {
         return Track.__create(name: name, sections: newSections, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }
 
-    private static func __create(name: String, sections: [Section], instrument: SynthPatch? = nil, volume: Double? = nil, activity: LoopActivity? = nil, sectionOrder: SectionOrder? = nil, shuffleLoops: LoopActivity? = nil, muted: Bool? = nil) -> Track {
+    private static func __create(name: String, sections: [Section], instrument: Instrument? = nil, volume: Double? = nil, activity: LoopActivity? = nil, sectionOrder: SectionOrder? = nil, shuffleLoops: LoopActivity? = nil, muted: Bool? = nil) -> Track {
         return Track(name: name, sections: sections, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
     }
 
-    private init(name: String, sections: [Section], instrument: SynthPatch? = nil, volume: Double? = nil, activity: LoopActivity? = nil, sectionOrder: SectionOrder? = nil, shuffleLoops: LoopActivity? = nil, muted: Bool? = nil) {
+    private init(name: String, sections: [Section], instrument: Instrument? = nil, volume: Double? = nil, activity: LoopActivity? = nil, sectionOrder: SectionOrder? = nil, shuffleLoops: LoopActivity? = nil, muted: Bool? = nil) {
         self.name = name
         self.sections = sections
         self.instrument = instrument

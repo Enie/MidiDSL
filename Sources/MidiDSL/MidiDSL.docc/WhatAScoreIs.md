@@ -12,7 +12,7 @@ import MidiDSL
 @main
 struct Ballad: Score {
     var session = Session {
-        Track("keys", instrument: Synth.piano()) {
+        Track("keys", instrument: .generalMIDI(0)) {
             Section { "C4 E4 G4 | F3 A3 C4" }
         }
     }
@@ -35,7 +35,7 @@ struct Generated: Score {
             d.chance(0.4) ? "x" : "."
         }
         return Session {
-            Track("drums", instrument: Synth.drums()) {
+            Track("drums", instrument: .drums()) {
                 Section { Hat(hats) }
             }
         }
@@ -50,8 +50,8 @@ A computed session can name the type's own properties. That is often where a sou
 ```swift
 @main
 struct Combo: Score {
-    let rhodes = Synth.piano()
-    let upright = Synth.bass()
+    let rhodes = Instrument.generalMIDI(4)
+    let upright = Instrument.generalMIDI(32)
 
     var session: Session {
         Session {

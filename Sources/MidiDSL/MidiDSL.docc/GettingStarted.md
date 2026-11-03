@@ -53,17 +53,17 @@ This writes a Standard MIDI File that any DAW or notation program opens (see <do
 
 ### A typical structure
 
-Give each track its own sound with a ``Synth`` preset or builder, and bring tracks in and out across passes with `.active(...)`:
+Give each track its own ``Instrument``, the General MIDI sound a MIDI file opens it with, and bring tracks in and out across passes with `.active(...)`:
 
 ```swift
 Session {
-    Track("drums", instrument: Synth.drums()) {
+    Track("drums", instrument: .drums()) {
         Section {
             Kick("x... x... x... x...")
             Hat("x.x. x.x. x.x. x.x.")
         }
     }
-    Track("keys", instrument: Synth.pad()) {
+    Track("keys", instrument: .generalMIDI(89)) {
         Section { "Cm7 | Fm7 | Bbmaj7 | Ebmaj7" }
     }
     .active(loops: 1...)   // joins on the second pass
