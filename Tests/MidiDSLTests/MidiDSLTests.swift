@@ -1373,6 +1373,17 @@ class ArpeggioNotationTests: XCTestCase {
             XCTAssertEqual(note.startTime, 0.25 * Double(i), accuracy: 0.001)
         }
     }
+
+    func testStackArpeggioPostfixInlineNotation() {
+        // The mark after the bracket belongs to the stack, unbarred as in a bar: no stray token,
+        // so no extra rest, and the holds after it still hold.
+        let section = Section { "[D3 A3 E4 F#4]~= - C4" }
+        let stack = section.notes.filter { $0.startTime < 1.0 }.sorted { $0.startTime < $1.startTime }
+        XCTAssertEqual(stack.map { $0.pitch }, [38, 45, 52, 54])
+        XCTAssertEqual(stack.map { $0.startTime }, [0, 0.25, 0.5, 0.75])
+        XCTAssertEqual(section.notes.filter { $0.pitch == nil }.count, 1)
+        XCTAssertEqual(section.notes.first { $0.pitch == 48 }?.startTime, 3)
+    }
 }
 
 // MARK: - Velocity scaling & gated shuffle plumbing
@@ -5363,4 +5374,9 @@ final class SessionPassTests: XCTestCase {
         XCTAssertEqual(decoded.advisories, session.advisories)
         XCTAssertEqual(decoded.tracks, session.tracks)
     }
+}
+
+// A chord's notes spelled as notation, for comparing against what a test expects.
+extension Chord {
+    var noteNotations: [NoteNotation] { notes.map { NoteNotation(pitch: $0.pitch) } }
 }

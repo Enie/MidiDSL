@@ -199,7 +199,7 @@ public struct DrumLane {
     }
 }
 
-/// A drum lane for any kit piece or sample slice, played from a step grid.
+/// A drum lane for any kit piece, played from a step grid.
 ///
 /// See <doc:Drums>.
 public func Lane(_ piece: DrumPiece, _ grid: String) -> DrumLane { DrumLane(piece, grid) }

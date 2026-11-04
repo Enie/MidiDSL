@@ -1316,7 +1316,9 @@ public enum SectionBuilder {
             idx += 1
             if groupJustClosed {
                 groupJustClosed = false
-                if char == ">" || char == "^" {
+                // A slide or hammer continues the stack, and so does a postfix arpeggio mark
+                // ("[C E G]~=") — split off, the mark would be a token of its own.
+                if char == ">" || char == "^" || char == "~" {
                     current += String(char)
                     continue
                 }

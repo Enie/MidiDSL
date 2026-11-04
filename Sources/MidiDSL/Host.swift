@@ -95,9 +95,9 @@ public enum TrackKeys {
         claimed.append(KeyedClaim(key: key, sound: sound))
         if key > 127 {
             ScoreAdvisories.note(SessionAdvisory(message:
-                "More than \(127 - Int(firstKey) + 1) slices are playing on one track, so "
-                + "\"\(sound.keyName)\" and any after it are silent — the keys run out. Chop the "
-                + "break more coarsely, or put the rest on a track of their own."))
+                "More than \(127 - Int(firstKey) + 1) sounds need a key of their own on one track, so "
+                + "\"\(sound.keyName)\" and any after it are silent — the keys run out. Put the rest "
+                + "on a track of their own."))
         }
         return key
     }

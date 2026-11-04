@@ -412,11 +412,6 @@ public class Chord {
     }
     
     @_documentation(visibility: internal)
-    public var noteNotations: [NoteNotation] {
-        return notes.map{NoteNotation(pitch: $0.pitch)}
-    }
-    
-    @_documentation(visibility: internal)
     public static let romanNumeralToScaleDegree: [String: Int] = [
         "I": 0, "II": 1, "III": 2, "IV": 3, "V": 4, "VI": 5, "VII": 6,
         "i": 0, "ii": 1, "iii": 2, "iv": 3, "v": 4, "vi": 5, "vii": 6
