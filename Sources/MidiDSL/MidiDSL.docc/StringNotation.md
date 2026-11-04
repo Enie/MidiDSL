@@ -12,7 +12,7 @@ Two modes: inline notation (tokens separated by spaces, each lasting one whole n
 
 ### Note names
 
-```swift
+```
 C  D#4  Bb2  E6  E#  Cb4  F##  'G7
 ```
 
@@ -20,7 +20,7 @@ Letter + any run of #/b + optional octave. A bare name (no octave) means octave 
 
 ### Compact runs
 
-```swift
+```
 "CDEF"  "C4E4G4"
 ```
 
@@ -32,7 +32,7 @@ A single token of run-together notes is split character-wise into a sequence —
 
 ### Run groups
 
-```swift
+```
 {1 2 3 4}  {C5 D5 E5}  {1 2 3}
 ```
 
@@ -47,7 +47,7 @@ Everything inside a { } group shares the one slot the group sits in — the seri
 
 ### Rests
 
-```swift
+```
 R  _  (space)
 ```
 
@@ -61,7 +61,7 @@ R or _ is a one-beat rest. In inline notation a space between two sounding token
 
 ### Chord tokens
 
-```swift
+```
 Cm7  Fmaj7  Bbm7b5  Gdom7  Ddim  Eaug  Cm9
 ```
 
@@ -69,7 +69,7 @@ Root + quality suffix. Suffixes: (empty)/M/maj, m/mi/min, dim/o, aug/+, dom7/dom
 
 ### Altered chord tokens
 
-```swift
+```
 G7b9  Cmaj7#11  Am7b13  C7b5
 ```
 
@@ -81,7 +81,7 @@ Any quality suffix can carry trailing alterations b/# + 5, 9, 11 or 13 in one to
 
 ### Jazz extension brackets
 
-```swift
+```
 [Cmaj7 9 #11]  [Gdom7 b9 13]
 ```
 
@@ -93,7 +93,7 @@ A bracketed chord adds extension tones: 7, b7, maj7, 9, b9, #9, 11, #11, 13, b13
 
 ### Custom note stacks
 
-```swift
+```
 [C E G Bb4]  [C7 E]  [Cdom7 'G8]
 ```
 
@@ -103,7 +103,7 @@ If the first element isn't a chord name, the bracketed notes simply sound togeth
 
 ### (C E G)
 
-```swift
+```
 (pitch pitch …)
 ```
 
@@ -117,7 +117,7 @@ One note per pass, cycling through the listed pitches on each loop iteration. Pr
 
 ### Pattern marks
 
-```swift
+```
 ~Cm7  ~~Cm7  ~*Cm7  ?Cm7   (also postfix: Cm7~)
 ```
 
@@ -125,7 +125,7 @@ Arpeggiate a chord token: ~ up, ~~ down, ~* alternating (low-high-middle), ? ran
 
 ### Fill spread
 
-```swift
+```
 ~=Cm7   Cm7~=   ~~=Cm7
 ```
 
@@ -133,7 +133,7 @@ Adding = spreads the arpeggio evenly over the chord's own duration instead of a 
 
 ### Timed spread
 
-```swift
+```
 ~0.25Cm7   Cm7~0.25   Cm7~~0.5
 ```
 
@@ -141,7 +141,7 @@ A number after the mark spreads the arpeggio over exactly that duration (in whol
 
 ### Stack arpeggios
 
-```swift
+```
 ~=[D3 A3 E4 F#4]   [B4 G#4 F#4 D4]~=
 ```
 
@@ -155,7 +155,7 @@ Arpeggio marks on a custom note stack play it in its *written* order — the lis
 
 ### +
 
-```swift
+```
 "…" + "…"  /  expression + expression
 ```
 
@@ -168,19 +168,18 @@ Between two plain strings, + is Swift's own: it joins the text, and one set of m
 
 ### Automating a join
 
+A curve written on a join covers all of it, measured across the whole join:
+
 ```swift
-(a + b).automate(_ target: AutomationTarget, over breakpoints: [Double: Double], curve: AutomationShape = .linear)
+("| 1 3 5 5 |".key(.C5, .major) + "| 5 3 2 1 |".key(.A4, .minor))
+    .automate(.volume, over: [0: 0.2, 1: 1.0])
 ```
 
-- term `target`: As on a single line — see .automate. A per-voice curve here multiplies with any a part carries; a track parameter written on a part covers that part's own window, and two serial parts sweeping the same one are two sweeps, not a contest.
-- term `over`: time: value across the whole join, as a fraction of its total span. at:, bars: and beats: work here too, exactly as they do on one line.
-- term `curve`: The shape between breakpoints — .linear, .exponential, .smooth, .hold.
-
-A curve written on the join covers all of it. Other modifiers belong on the parts, which is the point of joining rather than concatenating.
+Other modifiers belong on the parts, which is the reason to join rather than concatenate. A volume curve on the join multiplies with any a part carries. A track-wide target written on a part covers that part's own stretch, so two parts sweeping the cutoff one after the other are two sweeps.
 
 ### Interpolation
 
-```swift
+```
 "\(expression) | G"
 ```
 
@@ -190,7 +189,7 @@ Interpolating notation that carries modifiers into another string keeps the note
 
 ### Hold  -
 
-```swift
+```
 "Cm - - -"   "Cm - - - | - - - -"
 ```
 
@@ -202,7 +201,7 @@ A lone - extends the previous token's notes through its slot instead of re-attac
 
 ### Add notes  +
 
-```swift
+```
 +9  +[9]  +[9 13]  +D5  +Cm9
 ```
 
@@ -214,7 +213,7 @@ Keeps the previous notes ringing and attacks new ones on top. Bare tokens or [br
 
 ### Arpeggiated adds
 
-```swift
+```
 +Cm9~0.15   +~0.15[9 13]
 ```
 
@@ -232,7 +231,7 @@ Inside a compact run, - extends the previous note by one slot: C and D last two 
 
 ### Slide into  >
 
-```swift
+```
 "C >E"   "Cm - >Fm -"   "Cm >[Fm7 9]"   "Cmaj | >Fmaj"
 ```
 
@@ -246,7 +245,7 @@ A token starting with > continues the previous notes into new pitches — one vo
 
 ### Bent note  >
 
-```swift
+```
 "C>E"   "CD>EF"   "Am>Gmaj"   "[C E]>[D F]"   "1>3"   "C>D>E"
 ```
 
@@ -259,7 +258,7 @@ A token starting with > continues the previous notes into new pitches — one vo
 
 ### Glide timing
 
-```swift
+```
 >E   >=E   >0.25E   (a bare number is a degree: >5)
 ```
 
@@ -272,7 +271,7 @@ Default is a quick ~80 ms glide. = spreads the glide over the whole available sp
 
 ### Scoop  >-3E
 
-```swift
+```
 ">-3E"   ">+5E"   ">0.1-3E"   ">-3Am"
 ```
 
@@ -297,7 +296,7 @@ A bare > target with nothing held scoops from the last pitch the string sounded 
 
 ### Hammer-on / pull-off  ^
 
-```swift
+```
 "C ^E"   "C^E"   "E^C"   "C^0.7E"   "Am^Gmaj"   "C^D^E"
 ```
 
@@ -310,7 +309,7 @@ A bare > target with nothing held scoops from the last pitch the string sounded 
 
 ### Fall  C>-3  C>_
 
-```swift
+```
 "C>-3"   "C>+2"   "C>_"   "C>0.25-3"   "Am>_"   "CDE>-3"
 ```
 
@@ -339,163 +338,29 @@ Bars are separated by |. Each bar's tokens share it equally: one chord fills the
 
 ## String modifiers
 
-### .duration()
+A notation string takes modifiers like a section does. Everything a string carries is applied in one pass after it is read, so the order you write them in does not matter.
 
 ```swift
-"…".duration(_ d: MusicTimeStamp)
+"CEGC6".duration(.n8)                        // four eighths
+"Am~0.15 Fmaj7~0.15".durations(.n2, .n2, .n1) // strum, breath, strum held
+"| 1 2 3 5 |".key(.D5, .dorian).velocity(90)
+"CDEF".transpose(-12)                         // an octave down
 ```
 
-- term `d`: One length for every beat, in whole notes (.n8 an eighth, .n4 a quarter). It also re-spaces: beats still on the default grid are laid back to back, so this changes how long the string lasts.
+| Modifier | Does |
+|---|---|
+| ``Swift/String/duration(_:)`` | one duration for every slot, laid back to back |
+| ``Swift/String/durations(_:)`` | a duration per slot, laid back to back |
+| ``Swift/String/velocity(_:)`` | one velocity for every note |
+| ``Swift/String/velocities(_:)`` | a velocity per slot |
+| ``Swift/String/key(_:_:)`` | the key the degrees are read in |
+| ``Swift/String/transpose(_:)`` | every pitch up or down by semitones |
+| ``Swift/String/octave(_:)`` | every pitch up or down by octaves, counted from octave 5 |
+| ``Swift/String/arpeggio(_:delay:)`` | every chord strummed with a fixed delay |
+| ``Swift/String/arpeggio(over:pattern:)`` | every chord spread across a span |
+| ``Swift/String/arpeggioFill(_:)`` | every chord spread across its own length |
+| ``Swift/String/automate(_:over:curve:)`` | a curve across the line; see <doc:Automation> |
 
-Gives every beat the same duration and re-spaces beats that sit on the default grid back to back — "CDEF".duration(.n8) is four consecutive eighths.
+The per-slot modifiers count every slot, including the rests that spaces insert in inline notation: `"Am Fmaj7"` has three slots, chord, rest, chord. Slots past the end of the list keep their value; for durations that is a whole note, which can run past the bar. To write chords back to back without rests, use bar notation.
 
-```swift
-"CEGC6".duration(.n8)
-```
-
-### .durations()
-
-```swift
-"…".durations(_ ds: MusicTimeStamp...)
-```
-
-- term `ds`: One length per beat, in order, re-spaced back to back. Every slot counts — including the rest slots that spaces insert in inline notation. Beats past the end of the list keep the whole-note default, which can silently overrun the loop.
-
-One duration per beat, re-spaced back to back like .duration(); chord notes share their beat's value. Every slot counts — including the rest slots that spaces insert in inline notation, so "Am Fmaj7" is three beats: chord, rest, chord. Beats beyond the list keep the whole-note default, which can silently overrun the loop. To put chords back to back without rests, use bar notation or one statement per chord instead.
-
-```swift
-"Am~0.15 Fmaj7~0.15".durations(.n2, .n2, .n1)   // strum, breath, strum held
-```
-
-### .automate(over:)
-
-```swift
-"…".automate(_ target: AutomationTarget, over breakpoints: [Double: Double], curve: AutomationShape = .linear)
-```
-
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
-- term `over`: time: value, with the time as a fraction of this line's own span — 0 is its start, 1 its end. The curve is linear between breakpoints and holds outside them, so one breakpoint is a constant and an empty dictionary changes nothing. Each time may appear only once: a repeated key is a Swift error at the literal, not a later value quietly winning.
-- term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
-
-Move a parameter over time — a fade, a swell, a filter sweep. Four spellings, one per unit of time; this one measures the curve against the line's own length, so it survives a tempo change or an edit that makes the line longer. Write .automate last in a chain: .durations() after it stretches each note's slice of the curve rather than moving the note along it.
-
-```swift
-"| 1 3 5 5 | 5 3 2 1 |".automate(.volume, over: [0: 0.2, 1: 1.0])
-Section { … }.automate(.volume, over: [0: 1, 0.75: 1, 1: 0])
-```
-
-### .automate(at:)
-
-```swift
-"…".automate(_ target: AutomationTarget, at breakpoints: [Double: Double], curve: AutomationShape = .linear)
-```
-
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
-- term `at`: time: value, with the time in whole notes from this line's start — the DSL's own unit, so .n4 and .n2 work as keys. Otherwise exactly as over:.
-- term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
-
-The same curve, with times in musical whole notes from this line's start.
-
-```swift
-Section { … }.automate(.volume, at: [0: 0.2, .n1: 1.0])
-```
-
-### .automate(bars:)
-
-```swift
-"…".automate(_ target: AutomationTarget, bars breakpoints: [Double: Double], curve: AutomationShape = .linear)
-```
-
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
-- term `bars`: time: value, with the time as a bar number counted from this line's start — not from the top of the piece. Read under the session's meter, the same meter bar notation is parsed under, so a bars: curve and a | … | phrase cannot disagree.
-- term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
-
-The same curve, with times as bar numbers off the session's time signature, counted from this line's start.
-
-```swift
-Section { … }.automate(.cutoff, bars: [0: 400, 3: 6000])
-```
-
-### .automate(beats:)
-
-```swift
-"…".automate(_ target: AutomationTarget, beats breakpoints: [Double: Double], curve: AutomationShape = .linear)
-```
-
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
-- term `beats`: time: value, with the time as a beat counted from this line's start. Agrees with bars: by construction — four beats of 4/4 are one bar.
-- term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
-
-The same curve, with times as beats off the session's time signature. Note the limit a shared parameter brings: two statements moving the same .cutoff, .resonance, .reverb or .cc in one window cannot each have it, so the later-written one wins. Only .volume is per-voice, and volume curves multiply.
-
-```swift
-Section { … }.automate(.volume, beats: [0: 0.2, 4: 1.0])
-```
-
-### .velocity() / .velocities()
-
-```swift
-"…".velocity(90)  /  .velocities(110, 70, 90, 70)
-```
-
-Uniform or per-beat velocities (0–127).
-
-### .arpeggio()
-
-```swift
-"…".arpeggio(_ pattern: ArpeggioPattern = .up, delay: MusicTimeStamp = 0.05)
-```
-
-- term `pattern`: The order the chord's notes enter: .up, .down, .alternating, .random. Random is deterministic — a dealt order, not a fresh one each recompile.
-- term `delay`: The gap between one note and the next, in whole notes. A fixed strum: the chord's own length doesn't change it, so a long chord still enters quickly. 0.05 is a tight strum.
-
-Arpeggiates every chord in the string with a fixed note delay.
-
-### .arpeggioFill()
-
-```swift
-"…".arpeggioFill(_ pattern: ArpeggioPattern = .up)
-```
-
-- term `pattern`: The order the notes enter. The spacing isn't yours to set here — the entries are spread across the chord's own duration, so a longer chord rolls more slowly.
-
-Arpeggiates every chord spread over the chord's own duration.
-
-### .arpeggio(over:)
-
-```swift
-"…".arpeggio(over: MusicTimeStamp, pattern: ArpeggioPattern = .up)
-```
-
-- term `over`: How long the whole roll takes, in whole notes, however long the chord is. The notes are spread evenly across it.
-- term `pattern`: The order the notes enter: .up, .down, .alternating, .random.
-
-Arpeggiates every chord spread over an explicit duration.
-
-### .transpose()
-
-```swift
-"…".transpose(_ semitones: Int)
-```
-
-- term `semitones`: How far to move every pitch, in half steps; negative goes down. 12 is an octave. Absolute names and degrees alike move, since this runs on the pitches.
-
-Shifts all pitches by semitones (negative = down).
-
-```swift
-"CDEF".transpose(-12)   // one octave down
-```
-
-### .octave()
-
-```swift
-"…".octave(_ n: Int)
-```
-
-- term `n`: Which octave bare note names land in — the octave they'd have written after them. Names that already carry one ("C4") are left alone; 5 is the default register, so 4 is an octave down.
-
-Moves bare note names (default octave 5) to the given octave.
-
-```swift
-"CEG".octave(3)
-```
+`.octave(n)` moves every pitch by `n - 5` octaves. A note name without an octave is in octave 5, so `"CEG".octave(3)` plays in octave 3, and a written `"C4"` moves with it to C2.

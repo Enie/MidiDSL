@@ -1,121 +1,55 @@
 # Notes, Rests and Note Sets
 
-The values a section is made of.
+The values a section is made of, written as Swift instead of notation.
 
 ## Overview
 
-The explicit, Swift-typed way to write notes when string notation isn't enough — exact velocities, unusual durations, or per-loop pitch variants.
-
-## Note
-
-### Note
+Most scores write notes as notation strings. Build a ``Note`` instead when you need an exact velocity, duration or start time, or when the notes come from code.
 
 ```swift
-Note(pitch: Pitch?)
+Section {
+    Note(pitch: .C5, velocity: 90, duration: 0.25)
+    Note(pitch: nil, duration: 0.25)                           // a quarter of silence
+}
 ```
 
-- term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
+Durations and start times are in whole notes: `1` is a whole note, `0.25` a quarter, whatever the meter. A pitch is a MIDI number or a ``Pitch`` constant such as `.C4` or `.ASharp5`; C5 is 60. A `nil` pitch is a rest that still takes its time.
 
-Quarter-note duration, velocity 100. A nil pitch is silence.
+A note's duration is how long it rings. It does not push back what comes after it: inside one statement, the notes are placed by their start times. Give several notes the same `startTime` to write a chord by hand:
 
 ```swift
-Note(pitch: .C4)
+Section {
+    Note(pitch: .C5, velocity: 80, startTime: 0, duration: 1)
+    Note(pitch: .E5, velocity: 80, startTime: 0, duration: 1)
+    Note(pitch: .G5, velocity: 80, startTime: 0, duration: 1)
+}
 ```
 
-### Note
+A note's velocity, 0…127, is multiplied by the track's and the session's volume on the way out.
+
+## Rests
+
+``Rest`` is a ``Note`` without a pitch. `Rest()` is a whole note of silence, and ``Note/init(startTime:duration:)`` places one exactly. A rest at the end of a statement makes the statement longer, which is how a line ends in silence.
+
+## Note sets
+
+A ``NoteSet`` is one note slot that plays a different member on each pass. ``NoteSetMode`` says in what order: up, down, up and back, or chosen by the dice.
 
 ```swift
-Note(pitch: Pitch?, duration: MusicTimeStamp)
+Loop(bars: 1, times: 4) { _ in
+    Section {
+        NoteSet(.C4, .DSharp4, .G4)              // C4, D#4, G4, C4 on the four rounds
+        NoteSet(.random, .C5, .D5, .E5)          // the dice choose, the same way every time
+    }
+}
 ```
 
-- term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
-- term `duration`: How long the note rings, in whole notes: 1.0 a whole note, 0.25 a quarter. It does not move what comes after it.
+In notation the same thing is `"(C4 D#4 G4)"`. See <doc:StringNotation> and <doc:DiceAndChance>.
 
-Explicit duration (1.0 = whole note), velocity 100.
+## Topics
 
-### Note
-
-```swift
-Note(pitch: Pitch?, velocity: UInt32, duration: MusicTimeStamp)
-```
-
-- term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
-- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way out.
-- term `duration`: How long the note rings, in whole notes: 1.0 a whole note, 0.25 a quarter. It does not move what comes after it.
-
-Explicit velocity (clamped to 0–127) and duration.
-
-### Note
-
-```swift
-Note(pitch: Pitch?, velocity: UInt32, startTime: MusicTimeStamp, duration: MusicTimeStamp)
-```
-
-- term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
-- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way out.
-- term `startTime`: Where the note begins inside the statement, in whole notes from its start. Notes given the same startTime sound together — this is how a chord is written by hand.
-- term `duration`: How long the note rings, in whole notes: 1.0 a whole note, 0.25 a quarter. It does not move what comes after it.
-
-Full control including the start time inside the statement — notes given the same startTime sound together.
-
-## Rest
-
-### Rest
-
-```swift
-Rest()
-```
-
-One whole note of silence.
-
-### Rest
-
-```swift
-Rest(startTime: MusicTimeStamp, duration: MusicTimeStamp)
-```
-
-- term `startTime`: Where the silence begins inside the statement, in whole notes from its start.
-- term `duration`: How long it lasts, in whole notes. A rest is a real note with no pitch, so this keeps the slot's time.
-
-Silence with explicit position and length.
-
-## NoteSet
-
-### NoteSet
-
-```swift
-NoteSet(_ pitches: Pitch..., duration: MusicTimeStamp = .quarter)
-```
-
-- term `pitches`: The pitches the slot may sound, in order. One of them plays per pass; the list is walked upward unless a mode says otherwise.
-- term `duration`: How long whichever pitch sounds rings, in whole notes. A quarter unless given.
-
-One note slot that plays a different pitch on each loop pass, cycling upward through the list.
-
-```swift
-NoteSet(.C3, .DSharp3, .G3)
-```
-
-### NoteSet
-
-```swift
-NoteSet(_ mode: NoteSetMode, _ pitches: Pitch..., duration: MusicTimeStamp = .quarter)
-```
-
-- term `mode`: How the list is walked across passes: .up, .down, .alternating, or .random for a deterministic draw.
-- term `pitches`: The pitches the slot may sound, in order.
-- term `duration`: How long whichever pitch sounds rings, in whole notes.
-
-Same, with an explicit cycling mode.
-
-```swift
-NoteSet(.random, .C3, .DSharp3, .G3, .ASharp3)
-```
-
-### NoteSetMode
-
-```swift
-.up  .down  .random  .alternating
-```
-
-Order in which the pitch variants are chosen across loop passes.
+- ``Note``
+- ``Rest``
+- ``NoteSet``
+- ``NoteSetMode``
+- ``Pitch``

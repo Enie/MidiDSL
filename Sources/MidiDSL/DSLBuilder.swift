@@ -156,61 +156,174 @@ public struct NotationExpression {
 
     init(_ notation: String) { self.notation = notation }
 
+    /// Reads the line's degrees in a key.
+    ///
+    /// The numbers in the line become notes of the key: `"1 3 5".key(.D5, .major)` is D5 F#5 A5.
+    /// Note names are not moved.
+    ///
+    /// - Parameters:
+    ///   - root: The key's first degree, as a pitch.
+    ///   - mode: The scale built on the root.
+    /// - Returns: The notation, with its key.
     public func key(_ root: Pitch, _ mode: ScaleMode) -> NotationExpression {
         var c = self; c._key = Scale(root, mode); return c
     }
+    /// Reads the line's degrees in a scale.
+    ///
+    /// - Parameter scale: The scale the numbers in the line are degrees of.
+    /// - Returns: The notation, with its key.
     public func key(_ scale: Scale) -> NotationExpression {
         var c = self; c._key = scale; return c
     }
 
+    /// Plays every note of the line at one velocity.
+    ///
+    /// - Parameter v: The velocity, 0…127.
+    /// - Returns: The notation, with its velocity.
     public func velocity(_ v: UInt32) -> NotationExpression {
         var c = self; c._velocity = v; return c
     }
     func withVelocities(_ vs: [UInt32]) -> NotationExpression {
         var c = self; c._velocities = vs; return c
     }
+    /// Gives each slot of the line its own velocity, in order.
+    ///
+    /// Every slot counts, including the rests that spaces insert between notes, so
+    /// `"C E G"` has five slots. Slots past the end of the list keep their velocity.
+    ///
+    /// - Parameter vs: One velocity per slot, 0…127.
+    /// - Returns: The notation, with its velocities.
     public func velocities(_ vs: UInt32...) -> NotationExpression { withVelocities(vs) }
 
+    /// Gives every slot of the line one duration, and plays the slots back to back.
+    ///
+    /// `"CDEF".duration(.n8)` is four eighths, half a bar in all.
+    ///
+    /// - Parameter d: The duration in whole notes, such as `.n8` or `0.125`.
+    /// - Returns: The notation, with its durations.
     public func duration(_ d: MusicTimeStamp) -> NotationExpression {
         var c = self; c._duration = d; return c
     }
     func withDurations(_ ds: [MusicTimeStamp]) -> NotationExpression {
         var c = self; c._durations = ds; return c
     }
+    /// Gives each slot of the line its own duration, in order, and plays them back to back.
+    ///
+    /// Every slot counts, including the rests that spaces insert, so `"Am Fmaj7"` has three:
+    /// chord, rest, chord. Slots past the end of the list keep the whole-note default.
+    ///
+    /// ```swift
+    /// "Am Fmaj7".durations(.n2, .n2, .n1)   // chord, a half of silence, chord held
+    /// ```
+    ///
+    /// - Parameter ds: One duration in whole notes per slot.
+    /// - Returns: The notation, with its durations.
     public func durations(_ ds: MusicTimeStamp...) -> NotationExpression { withDurations(ds) }
 
+    /// Spreads every chord in the line, one tone a fixed delay after the other.
+    ///
+    /// - Parameters:
+    ///   - pattern: The order the tones play in.
+    ///   - delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The notation, with its arpeggios.
     public func arpeggio(_ pattern: ArpeggioPattern = .up, delay: MusicTimeStamp = 0.05) -> NotationExpression {
         var c = self; c._arpeggioPattern = pattern; c._arpeggioDelay = delay; return c
     }
 
+    /// Spreads every chord in the line evenly across the chord's own duration.
+    ///
+    /// A longer chord rolls more slowly.
+    ///
+    /// - Parameter pattern: The order the tones play in.
+    /// - Returns: The notation, with its arpeggios.
     public func arpeggioFill(_ pattern: ArpeggioPattern = .up) -> NotationExpression {
         var c = self; c._arpeggioPattern = pattern; c._arpeggioFill = true; return c
     }
 
+    /// Spreads every chord in the line evenly across a span of time.
+    ///
+    /// - Parameters:
+    ///   - duration: How long the whole roll takes, in whole notes.
+    ///   - pattern: The order the tones play in.
+    /// - Returns: The notation, with its arpeggios.
     public func arpeggio(over duration: MusicTimeStamp, pattern: ArpeggioPattern = .up) -> NotationExpression {
         var c = self; c._arpeggioPattern = pattern; c._arpeggioOver = duration; return c
     }
 
+    /// Moves every pitch in the line by a number of semitones.
+    ///
+    /// Note names and degrees both move. `12` is an octave up, `-12` an octave down.
+    ///
+    /// - Parameter semitones: How far to move, in semitones. Negative moves down.
+    /// - Returns: The notation, transposed.
     public func transpose(_ semitones: Int) -> NotationExpression {
         var c = self; c._transpose = (c._transpose ?? 0) + semitones; return c
     }
 
+    /// Moves the line by whole octaves, counted from octave 5.
+    ///
+    /// A note name without an octave is in octave 5, so `"CEG".octave(3)` plays C3 E3 G3.
+    /// Every pitch moves by the same amount: in `"C4 E".octave(3)` the C4 becomes C2.
+    /// It is `transpose((n - 5) * 12)`.
+    ///
+    /// - Parameter n: The octave a note name without one lands in.
+    /// - Returns: The notation, transposed.
     public func octave(_ n: Int) -> NotationExpression {
         return transpose((n - 5) * 12)
     }
 
+    /// Moves a parameter across the line, with times as fractions of its length.
+    ///
+    /// `0` is the start of the line and `1` its end, so the curve keeps its shape when the line gets
+    /// longer. The value holds before the first breakpoint and after the last, so one breakpoint
+    /// is a constant. A value outside the target's range is clamped to it.
+    ///
+    /// ```swift
+    /// "| 1 3 5 5 | 5 3 2 1 |".automate(.volume, over: [0: 0.2, 1: 1.0])
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time a fraction of the line's length.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, over breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> NotationExpression {
         automating(target, breakpoints, timeScale: nil, curve: curve)
     }
+    /// Moves a parameter across the line, with times in whole notes from its start.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in whole notes from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, at breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> NotationExpression {
         automating(target, breakpoints, timeScale: 1, curve: curve)
     }
+    /// Moves a parameter across the line, with times in bars from its start.
+    ///
+    /// Bars are measured in the session's time signature, the same one bar notation is read in.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in bars from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, bars breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> NotationExpression {
         automating(target, breakpoints, timeScale: SectionBuilder.timeSignature.barDuration, curve: curve)
     }
+    /// Moves a parameter across the line, with times in beats from its start.
+    ///
+    /// Beats are the session's time signature's note value: quarters in 4/4, eighths in 6/8.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in beats from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, beats breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> NotationExpression {
         automating(target, breakpoints, timeScale: 1.0 / Double(SectionBuilder.timeSignature.noteValue), curve: curve)
@@ -337,18 +450,58 @@ public struct JoinedNotation {
 
     init(_ parts: [NotationExpression]) { self.parts = parts }
 
+    /// Moves a parameter across the join, with times as fractions of its length.
+    ///
+    /// `0` is the start of the join and `1` its end, so the curve keeps its shape when the join gets
+    /// longer. The value holds before the first breakpoint and after the last, so one breakpoint
+    /// is a constant. A value outside the target's range is clamped to it.
+    ///
+    /// ```swift
+    /// ("| 1 3 5 5 |" + "| 5 3 2 1 |").automate(.volume, over: [0: 0.2, 1: 1.0])
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time a fraction of the join's length.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, over breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> JoinedNotation {
         automating(target, breakpoints, timeScale: nil, curve: curve)
     }
+    /// Moves a parameter across the join, with times in whole notes from its start.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in whole notes from the start of the join.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, at breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> JoinedNotation {
         automating(target, breakpoints, timeScale: 1, curve: curve)
     }
+    /// Moves a parameter across the join, with times in bars from its start.
+    ///
+    /// Bars are measured in the session's time signature, the same one bar notation is read in.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in bars from the start of the join.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, bars breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> JoinedNotation {
         automating(target, breakpoints, timeScale: SectionBuilder.timeSignature.barDuration, curve: curve)
     }
+    /// Moves a parameter across the join, with times in beats from its start.
+    ///
+    /// Beats are the session's time signature's note value: quarters in 4/4, eighths in 6/8.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in beats from the start of the join.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     public func automate(_ target: AutomationTarget, beats breakpoints: [Double: Double],
                          curve: AutomationShape = .linear) -> JoinedNotation {
         automating(target, breakpoints, timeScale: 1.0 / Double(SectionBuilder.timeSignature.noteValue),
@@ -416,35 +569,148 @@ public func + (lhs: String, rhs: JoinedNotation) -> JoinedNotation {
 }
 
 public extension String {
+    /// Reads the line's degrees in a key.
+    ///
+    /// The numbers in the line become notes of the key: `"1 3 5".key(.D5, .major)` is D5 F#5 A5.
+    /// Note names are not moved.
+    ///
+    /// - Parameters:
+    ///   - root: The key's first degree, as a pitch.
+    ///   - mode: The scale built on the root.
+    /// - Returns: The notation, with its key.
     func key(_ root: Pitch, _ mode: ScaleMode) -> NotationExpression { NotationExpression(self).key(root, mode) }
+    /// Reads the line's degrees in a scale.
+    ///
+    /// - Parameter scale: The scale the numbers in the line are degrees of.
+    /// - Returns: The notation, with its key.
     func key(_ scale: Scale) -> NotationExpression { NotationExpression(self).key(scale) }
+    /// Plays every note of the line at one velocity.
+    ///
+    /// - Parameter v: The velocity, 0…127.
+    /// - Returns: The notation, with its velocity.
     func velocity(_ v: UInt32) -> NotationExpression { NotationExpression(self).velocity(v) }
+    /// Gives each slot of the line its own velocity, in order.
+    ///
+    /// Every slot counts, including the rests that spaces insert between notes, so
+    /// `"C E G"` has five slots. Slots past the end of the list keep their velocity.
+    ///
+    /// - Parameter vs: One velocity per slot, 0…127.
+    /// - Returns: The notation, with its velocities.
     func velocities(_ vs: UInt32...) -> NotationExpression { NotationExpression(self).withVelocities(vs) }
+    /// Gives every slot of the line one duration, and plays the slots back to back.
+    ///
+    /// `"CDEF".duration(.n8)` is four eighths, half a bar in all.
+    ///
+    /// - Parameter d: The duration in whole notes, such as `.n8` or `0.125`.
+    /// - Returns: The notation, with its durations.
     func duration(_ d: MusicTimeStamp) -> NotationExpression { NotationExpression(self).duration(d) }
+    /// Gives each slot of the line its own duration, in order, and plays them back to back.
+    ///
+    /// Every slot counts, including the rests that spaces insert, so `"Am Fmaj7"` has three:
+    /// chord, rest, chord. Slots past the end of the list keep the whole-note default.
+    ///
+    /// ```swift
+    /// "Am Fmaj7".durations(.n2, .n2, .n1)   // chord, a half of silence, chord held
+    /// ```
+    ///
+    /// - Parameter ds: One duration in whole notes per slot.
+    /// - Returns: The notation, with its durations.
     func durations(_ ds: MusicTimeStamp...) -> NotationExpression { NotationExpression(self).withDurations(ds) }
+    /// Spreads every chord in the line, one tone a fixed delay after the other.
+    ///
+    /// - Parameters:
+    ///   - pattern: The order the tones play in.
+    ///   - delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The notation, with its arpeggios.
     func arpeggio(_ pattern: ArpeggioPattern = .up, delay: MusicTimeStamp = 0.05) -> NotationExpression {
         NotationExpression(self).arpeggio(pattern, delay: delay)
     }
+    /// Spreads every chord in the line evenly across the chord's own duration.
+    ///
+    /// A longer chord rolls more slowly.
+    ///
+    /// - Parameter pattern: The order the tones play in.
+    /// - Returns: The notation, with its arpeggios.
     func arpeggioFill(_ pattern: ArpeggioPattern = .up) -> NotationExpression {
         NotationExpression(self).arpeggioFill(pattern)
     }
+    /// Spreads every chord in the line evenly across a span of time.
+    ///
+    /// - Parameters:
+    ///   - duration: How long the whole roll takes, in whole notes.
+    ///   - pattern: The order the tones play in.
+    /// - Returns: The notation, with its arpeggios.
     func arpeggio(over duration: MusicTimeStamp, pattern: ArpeggioPattern = .up) -> NotationExpression {
         NotationExpression(self).arpeggio(over: duration, pattern: pattern)
     }
+    /// Moves every pitch in the line by a number of semitones.
+    ///
+    /// Note names and degrees both move. `12` is an octave up, `-12` an octave down.
+    ///
+    /// - Parameter semitones: How far to move, in semitones. Negative moves down.
+    /// - Returns: The notation, transposed.
     func transpose(_ semitones: Int) -> NotationExpression { NotationExpression(self).transpose(semitones) }
+    /// Moves the line by whole octaves, counted from octave 5.
+    ///
+    /// A note name without an octave is in octave 5, so `"CEG".octave(3)` plays C3 E3 G3.
+    /// Every pitch moves by the same amount: in `"C4 E".octave(3)` the C4 becomes C2.
+    /// It is `transpose((n - 5) * 12)`.
+    ///
+    /// - Parameter n: The octave a note name without one lands in.
+    /// - Returns: The notation, transposed.
     func octave(_ n: Int) -> NotationExpression { NotationExpression(self).octave(n) }
+    /// Moves a parameter across the line, with times as fractions of its length.
+    ///
+    /// `0` is the start of the line and `1` its end, so the curve keeps its shape when the line gets
+    /// longer. The value holds before the first breakpoint and after the last, so one breakpoint
+    /// is a constant. A value outside the target's range is clamped to it.
+    ///
+    /// ```swift
+    /// "| 1 3 5 5 | 5 3 2 1 |".automate(.volume, over: [0: 0.2, 1: 1.0])
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time a fraction of the line's length.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     func automate(_ target: AutomationTarget, over breakpoints: [Double: Double],
                   curve: AutomationShape = .linear) -> NotationExpression {
         NotationExpression(self).automate(target, over: breakpoints, curve: curve)
     }
+    /// Moves a parameter across the line, with times in whole notes from its start.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in whole notes from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     func automate(_ target: AutomationTarget, at breakpoints: [Double: Double],
                   curve: AutomationShape = .linear) -> NotationExpression {
         NotationExpression(self).automate(target, at: breakpoints, curve: curve)
     }
+    /// Moves a parameter across the line, with times in bars from its start.
+    ///
+    /// Bars are measured in the session's time signature, the same one bar notation is read in.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in bars from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     func automate(_ target: AutomationTarget, bars breakpoints: [Double: Double],
                   curve: AutomationShape = .linear) -> NotationExpression {
         NotationExpression(self).automate(target, bars: breakpoints, curve: curve)
     }
+    /// Moves a parameter across the line, with times in beats from its start.
+    ///
+    /// Beats are the session's time signature's note value: quarters in 4/4, eighths in 6/8.
+    ///
+    /// - Parameters:
+    ///   - target: What moves. See ``AutomationTarget``.
+    ///   - breakpoints: `[time: value]`, the time in beats from the start of the line.
+    ///   - curve: How the value travels from one breakpoint to the next. See ``AutomationShape``.
+    /// - Returns: The notation, with the curve.
     func automate(_ target: AutomationTarget, beats breakpoints: [Double: Double],
                   curve: AutomationShape = .linear) -> NotationExpression {
         NotationExpression(self).automate(target, beats: breakpoints, curve: curve)
@@ -470,6 +736,9 @@ public struct ParseWarning: Equatable {
 @_documentation(visibility: internal)
 public enum SectionBuilder {
     public static var timeSignature: TimeSignature = .fourFour
+    /// The session's tempo while the score is being built, which `Section.tempo(_:)` measures
+    /// against. `Session.build(_:)` sets it, and the meter above, from what the session declares.
+    public static var tempo: Double = Session.defaultTempo
     private static var barDuration: MusicTimeStamp { timeSignature.barDuration }
 
     private static func stamped(_ notes: [Note], line: Int, column: Int, file: String,

@@ -13,9 +13,17 @@ swift run HelloScore --midi hello.mid
 From code, ``MIDIFile`` does the same for any ``Session``:
 
 ```swift
+let session = Session.build {
+    Session {
+        Track("melody") { Section { "| 1 2 3 | 5 - - |" } }
+    }
+    .timeSignature(.threeFour)
+}
 try MIDIFile.write(session, to: URL(fileURLWithPath: "piece.mid"))
 let bytes = MIDIFile.data(for: session, loops: 4)
 ```
+
+Build the session with ``Session/build(_:)``, as a ``Score`` does, so its bars are read in its own meter and its sections' tempos against its own tempo. A session built directly is read in 4/4 at 120.
 
 ### What is in the file
 

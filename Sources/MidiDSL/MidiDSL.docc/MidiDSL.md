@@ -55,6 +55,7 @@ Nothing in a score is random in the sense of `Double.random`. Everything left to
 - <doc:GettingStarted>
 - <doc:WhatAScoreIs>
 - <doc:MIDIFiles>
+- <doc:Glossary>
 
 ### The Structure of a Piece
 

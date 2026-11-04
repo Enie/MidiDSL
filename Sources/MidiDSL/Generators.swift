@@ -4,17 +4,39 @@ import Foundation
 
 /// Bar notation computed slot by slot, one token per slot.
 ///
+/// `Phrase` calls `fill` once for every slot of every bar, in order, and writes the answers as
+/// bar notation. The result is an ordinary notation string.
+///
+/// ```swift
+/// let notes = Dice(seed: 4).stream("melody")
+/// let line = Phrase(bars: 4, subdivisions: 2) { step in
+///     if step.isLastBar && step.isLastBeat { return step.isOnBeat ? "1" : "-" }
+///     return notes.pick("1", "2", "3", "5", "6", at: step)
+/// }
+/// ```
+///
+/// An answer with a space in it, such as `"[1 3 5]"` or `"1 3"`, is one slot: a space inside
+/// brackets is a chord, and anything else is grouped so it shares the slot. An empty answer is
+/// a rest.
+///
+/// - Parameters:
+///   - bars: How many bars to write. `0` writes an empty string.
+///   - beats: Beats per bar. Left out, the session's time signature decides.
+///   - subdivisions: Slots per beat. `1` gives one token per beat, `2` two.
+///   - fill: Answers the token for one slot: a degree, a note name, a chord, `-` to hold or `R`.
+/// - Returns: Bar notation with `beats × subdivisions` tokens per bar.
+///
 /// See <doc:GeneratingParts>.
-public func Phrase(bars: Int, beats: Int = 4, subdivisions: Int = 1,
+public func Phrase(bars: Int, beats: Int? = nil, subdivisions: Int = 1,
                    _ fill: (GridStep) -> String) -> String {
-    let bars = max(0, bars), beats = max(1, beats), subdivisions = max(1, subdivisions)
+    let bars = max(0, bars), subdivisions = max(1, subdivisions)
+    let beats = max(1, beats ?? SectionBuilder.timeSignature.beatsPerBar)
     let perBar = beats * subdivisions
     let slots = (0..<(bars * perBar)).map { index in
         NotationToken.slot(fill(GridStep(bar: index / perBar,
                                          beat: (index % perBar) / subdivisions,
                                          sub: index % subdivisions,
-                                         step: index % perBar,
-                                         index: index)))
+                                         bars: bars, beats: beats, subdivisions: subdivisions)))
     }
     return NotationToken.barred(slots, perBar: perBar)
 }
@@ -69,15 +91,52 @@ extension Array where Element: Hashable {
 
 // MARK: - Markov
 
-/// A Markov chain over notation tokens, learned from a phrase or stated as a table.
+/// A melody generator that learns from a phrase you write.
+///
+/// Give it a phrase in notation and it counts which token followed which; ``melody(bars:slots:seed:open:ending:)``
+/// then walks that table and writes new notation in the same idiom. The states are tokens, not
+/// pitches, so a tie or a rest is learned like a note, and the rhythm comes along with the shape.
+///
+/// ```swift
+/// let theme = Markov(from: "| 1 2 3 5 | 6 5 3 2 | 3 5 6 5 | 3 2 1 - |", order: 2)
+///
+/// Track("lead") {
+///     Section { theme.melody(bars: 8, seed: 7, ending: ["1"]) }.key(.D5, .dorian)
+/// }
+/// ```
+///
+/// The same seed writes the same melody every time. Write the phrase in degrees and `.key(…)`
+/// still moves the result. To set the transitions yourself instead of learning them, state the
+/// table (``init(_:start:slots:)-(_,Int?,_)``), or print a learned one with ``chart`` and edit it.
 ///
 /// See <doc:GeneratingMelodies>.
-public struct Markov {
+///
+/// ## Topics
+///
+/// ### Learning from a phrase
+/// - ``init(from:order:)``
+///
+/// ### Stating the table
+/// - ``init(_:start:slots:)-(_,Int?,_)``
+/// - ``init(_:starts:slots:)-([Int:[Int]],_,_)``
+/// - ``init(_:start:slots:)-(_,String?,_)``
+/// - ``init(_:starts:slots:)-([String:[String]],_,_)``
+///
+/// ### Writing a melody
+/// - ``melody(bars:slots:seed:open:ending:)``
+/// - ``melody(bars:slots:dice:open:ending:)``
+///
+/// ### Reading it back
+/// - ``chart``
+/// - ``order``
+/// - ``slots``
+public struct Markov: CustomStringConvertible {
 
-    @_documentation(visibility: internal)
+    /// How many tokens of history each choice looks at: 1 to 4.
     public let order: Int
 
-    @_documentation(visibility: internal)
+    /// Notes per bar the chain writes unless told otherwise: the commonest bar length in the
+    /// phrase it learned from, or the `slots:` a stated table gave.
     public let slots: Int
 
     private let table: [[String]: [String]]
@@ -90,7 +149,24 @@ public struct Markov {
 
     // MARK: Learning from notation
 
+    /// A chain learned from a phrase.
+    ///
+    /// ```swift
+    /// let m = Markov(from: "| 1 2 3 5 | 5 3 2 1 | 1 3 5 3 - - |", order: 2)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - notation: The phrase, in ordinary notation. Its tokens are the only ones the chain can
+    ///     write, how often each follows another is the weighting, and its `|` set the bar length
+    ///     and where a melody may begin.
+    ///   - order: How many tokens of history a choice looks at, 1 to 4. 1 wanders, 2 keeps the
+    ///     phrase's turns, 3 nearly quotes it. A value outside 1…4 is brought into range and the
+    ///     score warns.
     public init(from notation: String, order: Int = 1) {
+        if order < 1 || order > 4 {
+            ScoreAdvisories.note(SessionAdvisory(message:
+                "Markov(order: \(order)) is outside 1…4, so the chain uses order \(max(1, min(order, 4)))."))
+        }
         let order = max(1, min(order, 4))
         let bars = Markov.bars(of: notation)
 
@@ -143,15 +219,68 @@ public struct Markov {
 
     // MARK: Stating the table
 
+    /// A chain over degrees, stated as a table.
+    ///
+    /// Each degree lists the degrees that may follow it. Listing one twice makes it twice as
+    /// likely; there is no other way to weight a transition.
+    ///
+    /// ```swift
+    /// Markov([1: [2, 2, 3],
+    ///         2: [1, 3],
+    ///         3: [1]], start: 1)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - transitions: Each degree, and the degrees that may follow it.
+    ///   - start: The degree every melody begins on. Left out, the seed picks among the
+    ///     degrees you listed.
+    ///   - slots: Notes per bar, since a table has no bars to learn it from.
     public init(_ transitions: [Int: [Int]], start: Int? = nil, slots: Int = 4) {
+        self.init(transitions, starts: start.map { [$0] } ?? [], slots: slots)
+    }
+
+    /// A chain over degrees, stated as a table, with a choice of where to begin.
+    ///
+    /// ```swift
+    /// Markov([1: [2, 3], 2: [1, 3], 3: [1]], starts: [1, 1, 3])   // 1 twice as often as 3
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - transitions: Each degree, and the degrees that may follow it.
+    ///   - starts: The degrees a melody may begin on, each as likely as the next.
+    ///     List one twice to make it likelier. Empty, the seed picks among the degrees you listed.
+    ///   - slots: Notes per bar, since a table has no bars to learn it from.
+    public init(_ transitions: [Int: [Int]], starts: [Int], slots: Int = 4) {
         var tokens: [String: [String]] = [:]
         for (from, to) in transitions {
             tokens[String(from)] = to.map(String.init)
         }
-        self.init(tokens, start: start.map(String.init), slots: slots)
+        self.init(tokens, starts: starts.map(String.init), slots: slots)
     }
 
+    /// A chain over any notation tokens, stated as a table: note names, chords, stacks, ties.
+    ///
+    /// ```swift
+    /// Markov(["Cm7": ["Fm7", "Bbdom7"], "Fm7": ["Bbdom7"], "Bbdom7": ["Cm7"]], start: "Cm7")
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - transitions: Each token, and the tokens that may follow it.
+    ///   - start: The token every melody begins on. Left out, the seed picks among the
+    ///     tokens you listed.
+    ///   - slots: Notes per bar, since a table has no bars to learn it from.
     public init(_ transitions: [String: [String]], start: String? = nil, slots: Int = 4) {
+        self.init(transitions, starts: start.map { [$0] } ?? [], slots: slots)
+    }
+
+    /// A chain over any notation tokens, stated as a table, with a choice of where to begin.
+    ///
+    /// - Parameters:
+    ///   - transitions: Each token, and the tokens that may follow it.
+    ///   - starts: The tokens a melody may begin on, each as likely as the next.
+    ///     List one twice to make it likelier. Empty, the seed picks among the tokens you listed.
+    ///   - slots: Notes per bar, since a table has no bars to learn it from.
+    public init(_ transitions: [String: [String]], starts: [String], slots: Int = 4) {
         var table: [[String]: [String]] = [:]
         var alphabet: [String] = []
         var stated: [[String]] = []
@@ -165,7 +294,7 @@ public struct Markov {
         }
         self.order = 1
         self.table = table
-        self.starts = start.map { [[$0]] } ?? stated
+        self.starts = starts.isEmpty ? stated : starts.map { [$0] }
         self.alphabet = alphabet
         self.settable = Markov.settable(in: alphabet)
         self.slots = max(1, slots)
@@ -173,7 +302,54 @@ public struct Markov {
 
     // MARK: Writing a melody
 
-    public func melody(bars: Int, slots: Int? = nil, seed: Int = 0, open: Double = 0) -> String {
+    /// Walks the chain and writes a melody, as bar notation.
+    ///
+    /// ```swift
+    /// let m = Markov(from: "| 1 2 3 5 | 6 5 3 2 | 3 5 6 5 | 3 2 1 - |")
+    /// let fixed = m.melody(bars: 8, seed: 7)                  // a fixed melody
+    /// let home  = m.melody(bars: 8, seed: 7, ending: ["1"])   // …that comes home
+    /// let open  = m.melody(bars: 8, seed: 7, open: 0.25)      // …with a quarter left to each pass
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - bars: How many bars to write.
+    ///   - slots: Notes per bar. Left out, the chain's own ``slots``. Changing it re-bars the same
+    ///     tokens rather than writing different ones.
+    ///   - seed: The take. The same seed writes the same melody every time.
+    ///   - open: How much of the melody to leave undecided, from 0 to 1. An open slot is written
+    ///     as a `?(…)` set of the chain's likeliest choices, and a different member sounds on
+    ///     each pass. Only a slot with alternatives can open, so 1 doesn't open every slot.
+    ///   - ending: Tokens the melody must end on, such as `["1", "1'"]`. The last slot is chosen
+    ///     among them — from what the chain would play there if it can, otherwise directly.
+    ///     Empty, the melody ends wherever the walk is.
+    /// - Returns: Bar notation, `bars × slots` tokens long.
+    public func melody(bars: Int, slots: Int? = nil, seed: Int = 0, open: Double = 0,
+                       ending: [String] = []) -> String {
+        melody(bars: bars, slots: slots, dice: Dice(seed: seed), open: open, ending: ending)
+    }
+
+    /// Walks the chain and writes a melody, rolling from dice you give it.
+    ///
+    /// Use this to draw a melody from a stream the rest of the score also uses:
+    ///
+    /// ```swift
+    /// let dice  = Dice(seed: 7)
+    /// let chain = Markov(from: "| 1 2 3 5 | 6 5 3 2 | 3 5 6 5 | 3 2 1 - |")
+    /// let lead  = chain.melody(bars: 8, dice: dice.stream("lead"))
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - bars: How many bars to write.
+    ///   - slots: Tokens per bar. Left out, the chain's own ``slots``.
+    ///   - dice: The dice to roll from.
+    ///   - open: How much of the melody to leave undecided, from 0 to 1. An open slot is written
+    ///     as a `?(…)` set of the chain's likeliest choices, and a different member sounds on
+    ///     each pass.
+    ///   - ending: Tokens the melody must end on, such as `["1", "1'"]`. Empty, the melody ends
+    ///     wherever the walk is.
+    /// - Returns: Bar notation, `bars × slots` tokens long.
+    public func melody(bars: Int, slots: Int? = nil, dice: Dice, open: Double = 0,
+                       ending: [String] = []) -> String {
         let bars = max(0, bars)
         let perBar = max(1, slots ?? self.slots)
         let total = bars * perBar
@@ -182,7 +358,6 @@ public struct Markov {
             return NotationToken.barred(Array(repeating: "R", count: total), perBar: perBar)
         }
 
-        let dice = Dice(seed: seed)
         var written: [String] = []
         var walked: [String] = []
 
@@ -194,8 +369,14 @@ public struct Markov {
 
         while written.count < total {
             let index = written.count
-            let chosen = dice.pick(successors(after: walked), 2, index) ?? alphabet[0]
-            if open > 0, dice.value([3, index]) < open,
+            let isLast = index == total - 1
+            var candidates = successors(after: walked)
+            if isLast, !ending.isEmpty {
+                let fitting = candidates.filter(ending.contains)
+                candidates = fitting.isEmpty ? ending : fitting
+            }
+            let chosen = dice.pick(candidates, 2, index) ?? alphabet[0]
+            if open > 0, !(isLast && !ending.isEmpty), dice.value([3, index]) < open,
                let set = openSet(from: successors(after: walked, remembering: 1), including: chosen) {
                 written.append(set)
             } else {
@@ -204,11 +385,32 @@ public struct Markov {
             walked.append(chosen)
         }
 
+        if !ending.isEmpty, let last = written.last, !ending.contains(last) {
+            // The opening filled the whole melody before the walk could choose an ending.
+            written[written.count - 1] = dice.pick(ending, 2, written.count - 1) ?? last
+        }
         return NotationToken.barred(written, perBar: perBar)
     }
 
+    /// The chain's ``chart``.
+    public var description: String { chart }
+
     // MARK: Reading the chain back
 
+    /// The chain printed as a table you can paste back into the score and edit.
+    ///
+    /// Sketch with a phrase, print its chart, paste it over the `Markov(from:)` line, and adjust
+    /// the weights by hand — something a phrase can't do, since it can only add whole paths.
+    ///
+    /// ```swift
+    /// print(Markov(from: "| 1 2 1 2 | 1 2 1 3 |").chart)
+    /// // Markov([1: [2, 2, 2, 3],
+    /// //         2: [1, 1, 1],
+    /// //         3: [1]], start: 1, slots: 4)
+    /// ```
+    ///
+    /// A table is order 1 by nature, so a chain of a higher order prints as its order-1
+    /// version, with a comment saying so.
     public var chart: String {
         var notes: [String] = []
         if order > 1 {
@@ -232,15 +434,12 @@ public struct Markov {
             numeric ? token : "\"\(token.replacingOccurrences(of: "\"", with: "\\\""))\""
         }
 
-        let openings = starts.compactMap(\.first).reduced()
+        let openings = starts.compactMap(\.first)
         let opening: String?
-        if openings.count == 1 {
-            opening = literal(openings[0])
+        if openings.reduced().count == 1 {
+            opening = "start: " + literal(openings[0])
         } else if openings.count > 1 {
-            opening = literal(openings[0])
-            notes.append("// the phrase also opened on "
-                         + openings.dropFirst().map(literal).joined(separator: ", ")
-                         + " — a chart takes one start:")
+            opening = "starts: [" + openings.map(literal).joined(separator: ", ") + "]"
         } else {
             opening = nil
         }
@@ -255,7 +454,7 @@ public struct Markov {
         }.joined(separator: ",\n")
 
         var tail = ""
-        if let opening { tail += ", start: \(opening)" }
+        if let opening { tail += ", \(opening)" }
         tail += ", slots: \(slots)"
         return (["Markov([" + body + "]" + tail + ")"] + notes).joined(separator: "\n")
     }
@@ -328,9 +527,42 @@ public struct Markov {
 
 /// Automation breakpoints shaped like an oscillator: sine, triangle, sawtooth, square or random steps.
 ///
+/// A wave is the `[time: value]` dictionary you would otherwise type, so it goes wherever
+/// `automate` takes breakpoints, with any of its unit labels:
+///
+/// ```swift
+/// "| 1 3 5 5 |".automate(.volume, over: Wave.sine(cycles: 8, between: 0.6...1.0))
+/// Section { "| 1 3 5 8 |" }.automate(.cutoff, bars: Wave.triangle(cycles: 2, span: 8, between: 400...6000))
+/// ```
+///
+/// Every wave starts at the top of its band, unless a phase moves it.
 /// See <doc:Automation>.
+///
+/// ## Topics
+///
+/// ### Shapes
+///
+/// - ``sine(cycles:span:between:depth:phase:resolution:)``
+/// - ``triangle(cycles:span:between:depth:phase:)``
+/// - ``sawtooth(cycles:span:between:depth:rising:)``
+/// - ``square(cycles:span:between:depth:duty:)``
+/// - ``random(steps:span:between:depth:seed:)``
 public enum Wave {
 
+    /// A smooth wobble: a tremolo on `.volume`, a filter LFO on `.cutoff`.
+    ///
+    /// - Parameters:
+    ///   - cycles: How many times the wave goes round in the span. `0.5` is half a cycle.
+    ///   - span: The length the wave is written across, in the unit of the `automate` label it is
+    ///     passed to: `1` for `over:`, a number of bars for `bars:`, of beats for `beats:`.
+    ///   - band: The values the wave moves between, such as `0.6...1.0` for a tremolo or
+    ///     `400...6000` for a filter sweep in hertz.
+    ///   - depth: How far below the top of the band the wave reaches: `0` stays at the top,
+    ///     `1` reaches the bottom. A range changes it across the span, so `0...1` fades the wave in.
+    ///   - phase: Where in the cycle to start, in cycles. `0` starts at the top of the band,
+    ///     `0.5` at the bottom.
+    ///   - resolution: Breakpoints per cycle. The curve is straight between them.
+    /// - Returns: Breakpoints, as `automate` takes them.
     public static func sine(cycles: Double = 1, span: Double = 1,
                             between band: ClosedRange<Double>,
                             depth: ClosedRange<Double> = 1...1,
@@ -341,6 +573,19 @@ public enum Wave {
         }
     }
 
+    /// Up and down in straight lines.
+    ///
+    /// - Parameters:
+    ///   - cycles: How many times the wave goes round in the span. `0.5` is half a cycle.
+    ///   - span: The length the wave is written across, in the unit of the `automate` label it is
+    ///     passed to: `1` for `over:`, a number of bars for `bars:`, of beats for `beats:`.
+    ///   - band: The values the wave moves between, such as `0.6...1.0` for a tremolo or
+    ///     `400...6000` for a filter sweep in hertz.
+    ///   - depth: How far below the top of the band the wave reaches: `0` stays at the top,
+    ///     `1` reaches the bottom. A range changes it across the span, so `0...1` fades the wave in.
+    ///   - phase: Where in the cycle to start, in cycles. `0` starts at the top of the band,
+    ///     `0.5` at the bottom.
+    /// - Returns: Breakpoints, as `automate` takes them.
     public static func triangle(cycles: Double = 1, span: Double = 1,
                                 between band: ClosedRange<Double>,
                                 depth: ClosedRange<Double> = 1...1,
@@ -352,6 +597,19 @@ public enum Wave {
         }
     }
 
+    /// A ramp that snaps back at the end of each cycle.
+    ///
+    /// - Parameters:
+    ///   - cycles: How many times the wave goes round in the span. `0.5` is half a cycle.
+    ///   - span: The length the wave is written across, in the unit of the `automate` label it is
+    ///     passed to: `1` for `over:`, a number of bars for `bars:`, of beats for `beats:`.
+    ///   - band: The values the wave moves between, such as `0.6...1.0` for a tremolo or
+    ///     `400...6000` for a filter sweep in hertz.
+    ///   - depth: How far below the top of the band the wave reaches: `0` stays at the top,
+    ///     `1` reaches the bottom. A range changes it across the span, so `0...1` fades the wave in.
+    ///   - rising: `false` falls from the top and snaps back up, like a filter that opens on each
+    ///     beat and closes. `true` climbs from the bottom and drops.
+    /// - Returns: Breakpoints, as `automate` takes them.
     public static func sawtooth(cycles: Double = 1, span: Double = 1,
                            between band: ClosedRange<Double>,
                            depth: ClosedRange<Double> = 1...1,
@@ -361,6 +619,18 @@ public enum Wave {
         }
     }
 
+    /// On, off, on: a gate rather than a sweep.
+    ///
+    /// - Parameters:
+    ///   - cycles: How many times the wave goes round in the span. `0.5` is half a cycle.
+    ///   - span: The length the wave is written across, in the unit of the `automate` label it is
+    ///     passed to: `1` for `over:`, a number of bars for `bars:`, of beats for `beats:`.
+    ///   - band: The values the wave moves between, such as `0.6...1.0` for a tremolo or
+    ///     `400...6000` for a filter sweep in hertz.
+    ///   - depth: How far below the top of the band the wave reaches: `0` stays at the top,
+    ///     `1` reaches the bottom. A range changes it across the span, so `0...1` fades the wave in.
+    ///   - duty: The part of each cycle spent at the top, 0.01…0.99. `0.5` is even, `0.25` a short stab.
+    /// - Returns: Breakpoints, as `automate` takes them.
     public static func square(cycles: Double = 1, span: Double = 1,
                               between band: ClosedRange<Double>,
                               depth: ClosedRange<Double> = 1...1,
@@ -371,6 +641,20 @@ public enum Wave {
         }
     }
 
+    /// Sample and hold: a new level on every step, held until the next.
+    ///
+    /// The same seed always draws the same levels.
+    ///
+    /// - Parameters:
+    ///   - steps: How many levels across the span.
+    ///   - span: The length the wave is written across, in the unit of the `automate` label it is
+    ///     passed to: `1` for `over:`, a number of bars for `bars:`, of beats for `beats:`.
+    ///   - band: The values the wave moves between, such as `0.6...1.0` for a tremolo or
+    ///     `400...6000` for a filter sweep in hertz.
+    ///   - depth: How far below the top of the band the wave reaches: `0` stays at the top,
+    ///     `1` reaches the bottom. A range changes it across the span, so `0...1` fades the wave in.
+    ///   - seed: Which set of levels to draw. Change it to hear another.
+    /// - Returns: Breakpoints, as `automate` takes them.
     public static func random(steps: Int, span: Double = 1,
                               between band: ClosedRange<Double>,
                               depth: ClosedRange<Double> = 1...1,

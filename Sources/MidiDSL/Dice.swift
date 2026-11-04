@@ -1,9 +1,47 @@
 import Foundation
 
-/// Deterministic chance for generating a part while you write it.
+/// Chance that is the same on every run, for generating a part while you write it.
 ///
-/// `d(stream, bar, step)` answers a number in `0..<1` that depends only on the seed and the
-/// coordinates, so the same score produces the same part on every run. See <doc:DiceAndChance>.
+/// A `Dice` doesn't hand out numbers one after another. You ask it about a place, and the
+/// answer depends only on the seed, the stream and the coordinates you give, so the same
+/// score writes the same part every time it runs:
+///
+/// ```swift
+/// let dice = Dice(seed: 7)
+/// let ride = dice.stream("ride")
+///
+/// Lane(.ride, Grid(bars: 4) { step in
+///     ride.chance(0.3, at: step) ? "x" : "."
+/// })
+/// ```
+///
+/// Give each part a stream of its own (``stream(_:)``). Two parts asking one stream about the
+/// same step get the same answer and move together. Change the seed to hear another take.
+///
+/// These rolls happen while the score is built, so what they write is fixed material. For a
+/// choice the music makes again on every pass — a `?` step, a `?(…)` set — see
+/// <doc:DiceAndChance>.
+///
+/// ## Topics
+///
+/// ### Creating dice
+/// - ``init(seed:)``
+/// - ``stream(_:)``
+///
+/// ### Rolling at a grid step
+/// - ``chance(_:at:)``
+/// - ``pick(_:_:at:)-(T,T...,GridStep)``
+/// - ``pick(_:at:)``
+/// - ``int(in:at:)``
+/// - ``callAsFunction(at:)``
+///
+/// ### Rolling at coordinates
+/// - ``chance(_:_:_:)``
+/// - ``pick(_:_:at:_:)``
+/// - ``pick(_:_:_:)``
+/// - ``int(in:_:_:)``
+/// - ``callAsFunction(_:_:)``
+/// - ``value(_:)``
 public struct Dice {
 
     // MARK: - Composing: dice you roll while writing the piece
@@ -11,14 +49,63 @@ public struct Dice {
     @_documentation(visibility: internal)
     public let seed: UInt64
 
+    /// Dice for one take.
+    ///
+    /// - Parameter seed: The take. Neighbouring seeds are unrelated draws, not nearby ones.
+    ///   Keep it and the part never changes; change it to hear another.
     public init(seed: Int = 0) {
         self.seed = UInt64(bitPattern: Int64(seed))
     }
 
-    public func callAsFunction(_ coordinates: Int...) -> Double {
-        value(coordinates)
+    private init(bits: UInt64) { self.seed = bits }
+
+    /// Dice of their own for one part, derived from these.
+    ///
+    /// Rolls from one stream are independent of rolls from another, even at the same step,
+    /// so a ride and a snare generated side by side don't start moving together. The name
+    /// is only a label: the same name on the same dice always gives the same stream.
+    ///
+    /// ```swift
+    /// let dice  = Dice(seed: 7)
+    /// let ride  = dice.stream("ride")
+    /// let snare = dice.stream("snare")
+    /// ```
+    ///
+    /// - Parameter name: Any text that names the part.
+    /// - Returns: Dice whose every answer differs from these dice's.
+    public func stream(_ name: String) -> Dice {
+        var h: UInt64 = 0xCBF29CE484222325          // FNV-1a over the UTF-8: stable everywhere
+        for byte in name.utf8 { h = (h ^ UInt64(byte)) &* 0x100000001B3 }
+        return Dice(bits: Dice.mix(seed ^ Dice.mix(h)))
     }
 
+    // MARK: Coordinates
+
+    /// A number in `0..<1` for these coordinates.
+    ///
+    /// The same coordinates give the same number every time, and their order matters:
+    /// `dice(1, 2)` and `dice(2, 1)` are unrelated.
+    ///
+    /// ```swift
+    /// let dice = Dice(seed: 3)
+    /// let lift = dice(2, 1)     // bar 2, beat 1: the same number on every run
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - first: The first coordinate, usually the bar. At least one is required, because
+    ///     dice asked about nothing in particular would answer the same everywhere.
+    ///   - rest: Further coordinates, such as the step.
+    /// - Returns: A number from 0 up to, but not including, 1.
+    public func callAsFunction(_ first: Int, _ rest: Int...) -> Double {
+        value([first] + rest)
+    }
+
+    /// A number in `0..<1` for coordinates you already hold in an array.
+    ///
+    /// `dice.value([bar, step])` is `dice(bar, step)`.
+    ///
+    /// - Parameter coordinates: The coordinates, in order.
+    /// - Returns: A number from 0 up to, but not including, 1.
     public func value(_ coordinates: [Int]) -> Double {
         var h = Dice.mix(seed &+ 0x9E3779B97F4A7C15)
         for coordinate in coordinates {
@@ -27,18 +114,146 @@ public struct Dice {
         return Double(h >> 11) * (1.0 / Double(1 << 53))
     }
 
-    public func chance(_ probability: Double, _ coordinates: Int...) -> Bool {
-        value(coordinates) < probability
+    /// Yes or no, true about `probability` of the time across the places you ask about.
+    ///
+    /// ```swift
+    /// let fills = Dice(seed: 7).stream("fills")
+    /// let fillBars = (0..<16).filter { bar in fills.chance(0.25, bar) }   // about one bar in four
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - probability: How often the answer is true, from 0 to 1.
+    ///   - first: The first coordinate.
+    ///   - rest: Further coordinates.
+    /// - Returns: Whether the roll at these coordinates came in under `probability`.
+    public func chance(_ probability: Double, _ first: Int, _ rest: Int...) -> Bool {
+        value([first] + rest) < probability
     }
 
-    public func pick<T>(_ options: [T], _ coordinates: Int...) -> T? {
+    /// One of the options, each as likely as the others.
+    ///
+    /// Write an option twice to make it twice as likely.
+    ///
+    /// ```swift
+    /// let accents = Dice(seed: 7).stream("accents")
+    /// let hit = accents.pick("x", "x", "X", at: 3, 2)   // bar 3, beat 2
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - first: An option.
+    ///   - rest: The other options.
+    ///   - coordinate: The first coordinate.
+    ///   - more: Further coordinates.
+    /// - Returns: The option the roll at these coordinates landed on.
+    public func pick<T>(_ first: T, _ rest: T..., at coordinate: Int, _ more: Int...) -> T {
+        let options = [first] + rest
+        return options[index(count: options.count, value([coordinate] + more))]
+    }
+
+    /// One element of an array, each as likely as the others, or `nil` if it is empty.
+    ///
+    /// Use this form when the options are computed; ``pick(_:_:at:_:)`` takes them written out
+    /// and never answers `nil`.
+    ///
+    /// - Parameters:
+    ///   - options: The options.
+    ///   - first: The first coordinate.
+    ///   - rest: Further coordinates.
+    /// - Returns: The element the roll at these coordinates landed on, or `nil` for an empty array.
+    public func pick<T>(_ options: [T], _ first: Int, _ rest: Int...) -> T? {
         guard !options.isEmpty else { return nil }
-        return options[min(options.count - 1, Int(value(coordinates) * Double(options.count)))]
+        return options[index(count: options.count, value([first] + rest))]
     }
 
-    public func int(in range: ClosedRange<Int>, _ coordinates: Int...) -> Int {
+    /// A whole number in a range, both ends included.
+    ///
+    /// ```swift
+    /// let shifts = Dice(seed: 2).stream("shift")
+    /// let shift = shifts.int(in: -5...5, 4)    // a transposition for bar 4
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - range: The numbers to choose from.
+    ///   - first: The first coordinate.
+    ///   - rest: Further coordinates.
+    /// - Returns: A number in `range`.
+    public func int(in range: ClosedRange<Int>, _ first: Int, _ rest: Int...) -> Int {
+        integer(in: range, value([first] + rest))
+    }
+
+    // MARK: At a grid step
+
+    /// A number in `0..<1` for a step of a `Grid` or `Phrase`.
+    ///
+    /// The same as asking at the step's bar and its position in the bar,
+    /// `dice(step.bar, step.stepInBar)`.
+    ///
+    /// - Parameter step: The step a `Grid` or `Phrase` closure was handed.
+    /// - Returns: A number from 0 up to, but not including, 1.
+    public func callAsFunction(at step: GridStep) -> Double {
+        value([step.bar, step.stepInBar])
+    }
+
+    /// Yes or no for a step of a `Grid` or `Phrase`, true about `probability` of the time.
+    ///
+    /// ```swift
+    /// let ride = Dice(seed: 7).stream("ride")
+    /// let grid = Grid(bars: 2) { step in ride.chance(0.3, at: step) ? "x" : "." }
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - probability: How often the answer is true, from 0 to 1.
+    ///   - step: The step a `Grid` or `Phrase` closure was handed.
+    /// - Returns: Whether the roll at this step came in under `probability`.
+    public func chance(_ probability: Double, at step: GridStep) -> Bool {
+        callAsFunction(at: step) < probability
+    }
+
+    /// One of the options for a step of a `Grid` or `Phrase`.
+    ///
+    /// ```swift
+    /// let hats = Dice(seed: 7).stream("hats")
+    /// let grid = Grid(bars: 2) { step in step.isOnBeat ? "x" : hats.pick("o", ".", ".", at: step) }
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - first: An option.
+    ///   - rest: The other options.
+    ///   - step: The step a `Grid` or `Phrase` closure was handed.
+    /// - Returns: The option the roll at this step landed on.
+    public func pick<T>(_ first: T, _ rest: T..., at step: GridStep) -> T {
+        let options = [first] + rest
+        return options[index(count: options.count, callAsFunction(at: step))]
+    }
+
+    /// One element of an array for a step of a `Grid` or `Phrase`, or `nil` if it is empty.
+    ///
+    /// - Parameters:
+    ///   - options: The options.
+    ///   - step: The step a `Grid` or `Phrase` closure was handed.
+    /// - Returns: The element the roll at this step landed on, or `nil` for an empty array.
+    public func pick<T>(_ options: [T], at step: GridStep) -> T? {
+        guard !options.isEmpty else { return nil }
+        return options[index(count: options.count, callAsFunction(at: step))]
+    }
+
+    /// A whole number in a range for a step of a `Grid` or `Phrase`, both ends included.
+    ///
+    /// - Parameters:
+    ///   - range: The numbers to choose from.
+    ///   - step: The step a `Grid` or `Phrase` closure was handed.
+    /// - Returns: A number in `range`.
+    public func int(in range: ClosedRange<Int>, at step: GridStep) -> Int {
+        integer(in: range, callAsFunction(at: step))
+    }
+
+    private func index(count: Int, _ unit: Double) -> Int {
+        min(count - 1, Int(unit * Double(count)))
+    }
+
+    private func integer(in range: ClosedRange<Int>, _ unit: Double) -> Int {
         let span = range.upperBound - range.lowerBound + 1
-        return range.lowerBound + min(span - 1, Int(value(coordinates) * Double(span)))
+        return range.lowerBound + min(span - 1, Int(unit * Double(span)))
     }
 
     // MARK: - Varying: dice the machine rolls per pass

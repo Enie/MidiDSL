@@ -3,10 +3,20 @@ import Foundation
 ///
 /// See <doc:ChordsAndVoicings>.
 public enum ArpeggioPattern {
-    case up, down, random
+    /// Lowest tone first, rising.
+    case up
+    /// Highest tone first, falling.
+    case down
+    /// A shuffled order. The same chord always shuffles the same way.
+    case random
+    /// The tones in the order you list them, by index into the chord as built
+    /// (`0` is the root). Indices outside the chord are skipped.
     case custom([Int])
+    /// Lowest, then highest, then the tones between them, rising.
     case alternating
+    /// The root first, then the remaining tones, rising.
     case rootFirst
+    /// The remaining tones rising, then the root last.
     case rootLast
 }
 
@@ -14,7 +24,171 @@ public enum ArpeggioPattern {
 ///
 /// See <doc:ChordsAndVoicings>.
 public enum ChordQuality: Equatable {
-    case major, minor, diminished, augmented, dominant7, major7, minor7, add9, sus4, sus2, majorSixth, minorSixth, dominant7sus4, add11, power, halfDiminished, diminished7, dominant9, major9, minor9, minor11, dominant13, sixNine, minorMajor7, augmented7, augmentedMajor7, minorAdd9, dominant11, major11, major13, minor13, dominant9sus4, custom(String)
+    /// A major triad: root, major third, fifth.
+    ///
+    /// Written `"C"`, `"CM"` or `"Cmaj"`.
+    case major
+
+    /// A minor triad: root, minor third, fifth.
+    ///
+    /// Written `"Cm"`, `"Cmi"` or `"Cmin"`.
+    case minor
+
+    /// A diminished triad: root, minor third, diminished fifth.
+    ///
+    /// Written `"Cdim"` or `"Co"`.
+    case diminished
+
+    /// An augmented triad: root, major third, augmented fifth.
+    ///
+    /// Written `"Caug"` or `"C+"`.
+    case augmented
+
+    /// A dominant seventh: a major triad with a minor seventh.
+    ///
+    /// Written `"C7"`, `"Cdom7"` or `"Cdom"`.
+    case dominant7
+
+    /// A major seventh: a major triad with a major seventh.
+    ///
+    /// Written `"Cmaj7"`, `"CM7"` or `"CΔ7"`.
+    case major7
+
+    /// A minor seventh: a minor triad with a minor seventh.
+    ///
+    /// Written `"Cm7"` or `"Cmin7"`.
+    case minor7
+
+    /// A major triad with an added ninth and no seventh.
+    ///
+    /// Written `"Cadd9"`.
+    case add9
+
+    /// A suspended fourth: root, fourth, fifth.
+    ///
+    /// Written `"Csus4"` or `"Csus"`.
+    case sus4
+
+    /// A suspended second: root, second, fifth.
+    ///
+    /// Written `"Csus2"`.
+    case sus2
+
+    /// A major sixth: a major triad with a major sixth.
+    ///
+    /// Written `"Cmaj6"`, `"CM6"` or `"C6th"`.
+    case majorSixth
+
+    /// A minor sixth: a minor triad with a major sixth.
+    ///
+    /// Written `"Cm6"` or `"Cmin6"`.
+    case minorSixth
+
+    /// A dominant seventh with the third replaced by a fourth.
+    ///
+    /// Written `"C7sus4"`.
+    case dominant7sus4
+
+    /// A major triad with an added eleventh.
+    ///
+    /// Written `"Cadd11"`.
+    case add11
+
+    /// A power chord: root and fifth only.
+    ///
+    /// Written `"Cpow"` or `"Cno3"`.
+    case power
+
+    /// A half-diminished seventh: a diminished triad with a minor seventh.
+    ///
+    /// Written `"Cm7b5"`, `"Cø7"` or `"Cø"`.
+    case halfDiminished
+
+    /// A diminished seventh: a diminished triad with a diminished seventh.
+    ///
+    /// Written `"Cdim7"` or `"Co7"`.
+    case diminished7
+
+    /// A dominant ninth: a dominant seventh with a ninth.
+    ///
+    /// Written `"Cdom9"`.
+    case dominant9
+
+    /// A major ninth: a major seventh with a ninth.
+    ///
+    /// Written `"Cmaj9"` or `"CM9"`.
+    case major9
+
+    /// A minor ninth: a minor seventh with a ninth.
+    ///
+    /// Written `"Cm9"` or `"Cmin9"`.
+    case minor9
+
+    /// A minor eleventh: a minor ninth with an eleventh.
+    ///
+    /// Written `"Cm11"` or `"Cmin11"`.
+    case minor11
+
+    /// A dominant thirteenth: a dominant ninth with a thirteenth, no eleventh.
+    ///
+    /// Written `"C13"` or `"Cdom13"`.
+    case dominant13
+
+    /// A six-nine: a major sixth with a ninth.
+    ///
+    /// Written `"C69"` or `"C6/9"`.
+    case sixNine
+
+    /// A minor triad with a major seventh.
+    ///
+    /// Written `"CmMaj7"` or `"CmM7"`.
+    case minorMajor7
+
+    /// An augmented triad with a minor seventh.
+    ///
+    /// Written `"Caug7"` or `"C+7"`.
+    case augmented7
+
+    /// An augmented triad with a major seventh.
+    ///
+    /// Written `"CaugMaj7"` or `"C+M7"`.
+    case augmentedMajor7
+
+    /// A minor triad with an added ninth and no seventh.
+    ///
+    /// Written `"Cmadd9"`.
+    case minorAdd9
+
+    /// A dominant eleventh, voiced without the third.
+    ///
+    /// Written `"C11"` or `"Cdom11"`.
+    case dominant11
+
+    /// A major eleventh, voiced without the third.
+    ///
+    /// Written `"Cmaj11"` or `"CM11"`.
+    case major11
+
+    /// A major thirteenth: a major ninth with a thirteenth, no eleventh.
+    ///
+    /// Written `"Cmaj13"` or `"CM13"`.
+    case major13
+
+    /// A minor thirteenth: a minor ninth with a thirteenth, no eleventh.
+    ///
+    /// Written `"Cm13"` or `"Cmin13"`.
+    case minor13
+
+    /// A dominant ninth with the third replaced by a fourth.
+    ///
+    /// Written `"C9sus4"`.
+    case dominant9sus4
+
+    /// Any set of semitones above the root, as a comma-separated list.
+    ///
+    /// `.custom("0,3,7,10")` is a minor seventh. Chord notation reaches it as `cus`:
+    /// `"Ccus0,3,7,10"`. Chord symbols with altered tones, such as `"C7b9"`, also become this case.
+    case custom(String)
 
     var intervals: [UInt32] {
         switch self {
@@ -349,7 +523,45 @@ func arpeggiatedNotes(_ notes: [Note], pattern: ArpeggioPattern,
 /// A chord: a root, a quality and a duration, with modifiers for voicing, strumming and arpeggios.
 ///
 /// Written as notation (`"Am7"`) it needs no type at all; build one directly to transform it in code.
+///
+/// ```swift
+/// Section {
+///     Chord("A", .minor7, 2).arpeggio(over: 1)
+///     Chord("D", .minor9, 2).natural()
+/// }
+/// ```
+///
+/// Every modifier changes the chord and returns it, so they chain.
 /// See <doc:ChordsAndVoicings>.
+///
+/// ## Topics
+///
+/// ### Building a chord
+///
+/// - ``init(_:_:_:)``
+/// - ``init(_:_:)``
+/// - ``ChordQuality``
+///
+/// ### Adding tones
+///
+/// - ``ext(_:)``
+/// - ``addExtensions(_:)``
+///
+/// ### Shaping the tones
+///
+/// - ``velocities(_:)``
+/// - ``natural()``
+/// - ``duration(_:)``
+/// - ``durations(_:)``
+///
+/// ### Arpeggios
+///
+/// - ``arpeggio(_:delay:)``
+/// - ``arpeggio(over:pattern:)``
+/// - ``arpeggioUp(delay:)``
+/// - ``arpeggioDown(delay:)``
+/// - ``arpeggioCustom(_:delay:)``
+/// - ``ArpeggioPattern``
 public class Chord {
     @_documentation(visibility: internal)
     public var notes: [Note] = []
@@ -360,12 +572,27 @@ public class Chord {
     @_documentation(visibility: internal)
     public var duration: MusicTimeStamp { notes.reduce(into: 0) { $0 = max($0, $1.startTime+$1.duration) } }
     
+    /// A chord from a root and a quality.
+    ///
+    /// - Parameters:
+    ///   - root: The root as a note name, such as `"A4"`. Without an octave, `"A"`, it is in octave 5.
+    ///   - quality: The kind of chord to build on the root.
+    ///   - duration: How long every tone lasts, in whole notes.
     public init(_ root: NoteNotation, _ quality: ChordQuality, _ duration: MusicTimeStamp = 1.0) {
         self.root = root
         self.quality = quality
         self.notes = Chord.buildNotes(root: root, quality: quality, duration: duration)
     }
     
+    /// A chord read from a chord symbol, such as `"Am7"` or `"F#dim"`.
+    ///
+    /// A quality the symbol does not spell is read as major, so check the spelling: `"C9"` is
+    /// a C major triad, and the dominant ninth is `"Cdom9"`.
+    ///
+    /// - Parameters:
+    ///   - notation: The chord symbol, a root followed by a quality.
+    ///   - duration: How long every tone lasts, in whole notes.
+    /// - Returns: `nil` when the root is not a note name.
     public init?(_ notation: ChordNotation, _ duration: MusicTimeStamp = 1.0) {
         root = notation.root
         quality = notation.quality
@@ -375,6 +602,7 @@ public class Chord {
         notes = Chord.buildNotes(root: root, quality: quality, duration: duration)
     }
     
+    @_documentation(visibility: internal)
     public static func buildNotes(root: NoteNotation, quality: ChordQuality = .major, duration: MusicTimeStamp = 1.0) -> [Note] {
         guard let rootPitch = root.pitch else {
             return []
@@ -442,6 +670,12 @@ public class Chord {
         return chordRoot + type.notation
     }
     
+    /// Sets each tone's velocity, lowest interval first, in the order the chord was built.
+    ///
+    /// Extra values are ignored; tones without one keep theirs. Values clamp to 0…127.
+    ///
+    /// - Parameter velocities: One velocity per tone, starting with the root.
+    /// - Returns: The chord, changed.
     public func velocities(_ velocities: UInt32...) -> Chord {
         for (index, velocity) in velocities.enumerated() {
             if index < notes.count {
@@ -451,6 +685,12 @@ public class Chord {
         return self
     }
     
+    /// Gives the tones the slightly uneven velocities of a played chord.
+    ///
+    /// Each tone gets a velocity between 80 and 90, and the lowest tone 15 more.
+    /// The same chord always gets the same velocities.
+    ///
+    /// - Returns: The chord, changed.
     public func natural() -> Chord {
         let chordSalt = Dice.salt([UInt64(root.pitch ?? 0)] + quality.intervals.map(UInt64.init))
         let sortedNotes = notes.sorted { $0.pitch ?? 0 < $1.pitch ?? 0 }
@@ -468,6 +708,12 @@ public class Chord {
         return self
     }
 
+    /// Sets each tone's duration, in the order the chord was built.
+    ///
+    /// Extra values are ignored; tones without one keep theirs.
+    ///
+    /// - Parameter durations: One duration in whole notes per tone, starting with the root.
+    /// - Returns: The chord, changed.
     public func durations(_ durations: Double...) -> Chord {
         for (index, duration) in durations.enumerated() {
             if index < notes.count {
@@ -477,6 +723,10 @@ public class Chord {
         return self
     }
     
+    /// Sets every tone to the same duration.
+    ///
+    /// - Parameter duration: The duration in whole notes.
+    /// - Returns: The chord, changed.
     public func duration(_ duration: MusicTimeStamp) -> Chord {
         notes = notes.map { note in
             var n = note
@@ -486,24 +736,54 @@ public class Chord {
         return self
     }
     
+    /// Spreads the tones in time, each one starting a fixed delay after the one before.
+    ///
+    /// Each tone keeps its duration, so a long delay makes the chord ring past its slot.
+    ///
+    /// - Parameters:
+    ///   - pattern: The order the tones play in.
+    ///   - delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The chord, changed.
     public func arpeggio(_ pattern: ArpeggioPattern = .up, delay: MusicTimeStamp = 0.05) -> Chord {
         notes = arpeggiatedNotes(notes, pattern: pattern, delay: delay, rootPitch: root.pitch)
         return self
     }
     
+    /// Spreads the tones evenly across a span of time.
+    ///
+    /// The delay between tones is the span divided by the number of tones.
+    ///
+    /// - Parameters:
+    ///   - totalDuration: The span in whole notes.
+    ///   - pattern: The order the tones play in.
+    /// - Returns: The chord, changed.
     public func arpeggio(over totalDuration: MusicTimeStamp, pattern: ArpeggioPattern = .up) -> Chord {
         let delay = notes.isEmpty ? 0 : totalDuration / MusicTimeStamp(notes.count)
         return arpeggio(pattern, delay: delay)
     }
 
+    /// Spreads the tones rising. The same as `arpeggio(.up, delay:)`.
+    ///
+    /// - Parameter delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The chord, changed.
     public func arpeggioUp(delay: MusicTimeStamp = 0.05) -> Chord {
         return arpeggio(.up, delay: delay)
     }
     
+    /// Spreads the tones falling. The same as `arpeggio(.down, delay:)`.
+    ///
+    /// - Parameter delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The chord, changed.
     public func arpeggioDown(delay: MusicTimeStamp = 0.05) -> Chord {
         return arpeggio(.down, delay: delay)
     }
     
+    /// Spreads the tones in an order you list. The same as `arpeggio(.custom(order), delay:)`.
+    ///
+    /// - Parameters:
+    ///   - order: Indices into the chord as built, `0` being the root.
+    ///   - delay: The time between one tone and the next, in whole notes.
+    /// - Returns: The chord, changed.
     public func arpeggioCustom(_ order: [Int], delay: MusicTimeStamp = 0.05) -> Chord {
         return arpeggio(.custom(order), delay: delay)
     }
@@ -533,6 +813,12 @@ public class Chord {
         }
     }
 
+    /// Adds tones named as extensions, from an array.
+    ///
+    /// The array form of ``ext(_:)``, for extensions you build in code.
+    ///
+    /// - Parameter tokens: Extension names, as ``ext(_:)`` takes them.
+    /// - Returns: The chord, changed.
     @discardableResult
     public func addExtensions(_ tokens: [String]) -> Chord {
         guard let rootPitch = root.pitch else { return self }
@@ -550,6 +836,22 @@ public class Chord {
         return self
     }
 
+    /// Adds tones named as extensions: `"7"`, `"b7"`, `"maj7"`, `"9"`, `"b9"`, `"#9"`,
+    /// `"11"`, `"#11"`, `"13"`, `"b13"`, and the altered fifths `"b5"` and `"#5"`.
+    ///
+    /// ```swift
+    /// Chord("C", .major).ext("9")       // C E G D
+    /// Chord("G", .major).ext("b7", "b9") // G B D F Ab
+    /// ```
+    ///
+    /// `"7"` adds the seventh of the chord's own scale: major on a major or augmented triad,
+    /// diminished on a diminished one, minor on the rest, and nothing if the chord already
+    /// has a sixth or seventh. Use `"b7"` for the dominant seventh on a major triad.
+    /// An altered fifth replaces the fifth. A tone the chord already has, or a name it does not
+    /// know, is skipped.
+    ///
+    /// - Parameter extensions: Extension names.
+    /// - Returns: The chord, changed.
     @discardableResult
     public func ext(_ extensions: String...) -> Chord {
         return addExtensions(extensions)

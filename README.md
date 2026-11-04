@@ -63,9 +63,14 @@ swift run HelloScore --midi hello.mid
 ```
 
 writes the piece as a Standard MIDI File, ready for any DAW or notation
-program. From code, any `Session` does the same:
+program. From code, any `Session` does the same. Build it with `Session.build`, as a
+score does, so its bars are read in its own meter:
 
 ```swift
+let session = Session.build {
+    Session { Track("melody") { Section { "| 1 2 3 | 5 - - |" } } }
+        .timeSignature(.threeFour)
+}
 try MIDIFile.write(session, to: URL(fileURLWithPath: "piece.mid"))
 let bytes = MIDIFile.data(for: session, loops: 4)
 ```

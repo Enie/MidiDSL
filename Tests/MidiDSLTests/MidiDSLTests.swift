@@ -1706,7 +1706,7 @@ class LoopActivityTests: XCTestCase {
         let track = Track(name: "t") { Section { Note(pitch: 60) } }
             .active(loops: 2...)
             .volume(0.5)
-            .tempo(120)
+            .instrument(.generalMIDI(0))
         XCTAssertEqual(track.activity, .range(from: 2, through: nil))
     }
 
@@ -2237,7 +2237,7 @@ class SlideNotationTests: XCTestCase {
     }
 
     func testSectionTempoWarpsSlideTimes() {
-        let section = Section { "C >0.5E" }.tempo(120)
+        let section = Section { "C >0.5E" }.tempo(60)
         XCTAssertEqual(section.notes[0].slides?.first?.at, 2.0)
         XCTAssertEqual(section.notes[0].slides?.first?.over, 1.0)
     }
@@ -2558,9 +2558,9 @@ class ScoopAndFallNotationTests: XCTestCase {
     }
 
     func testSectionTempoWarpsFallLength() {
-        let section = Section { "C>0.25-3" }.tempo(120)
+        let section = Section { "C>0.25-3" }.tempo(60)
         XCTAssertEqual(section.notes[0].fall, Fall(semitones: -3, over: 0.5))
-        let quick = Section { "C>_" }.tempo(120)
+        let quick = Section { "C>_" }.tempo(60)
         XCTAssertEqual(quick.notes[0].fall, Fall(semitones: -5, over: 0))
     }
 
@@ -2924,7 +2924,6 @@ class SectionOrderTests: XCTestCase {
     func testModifiersPreserveTheOrder() {
         let shuffled = track.shuffleSections()
         XCTAssertEqual(shuffled.volume(0.5).sectionOrder, .shuffled)
-        XCTAssertEqual(shuffled.tempo(90).sectionOrder, .shuffled)
         XCTAssertEqual(shuffled.active(every: 2).sectionOrder, .shuffled)
         XCTAssertEqual(shuffled.replacingSections(shuffled.sections).sectionOrder, .shuffled)
     }
@@ -3023,7 +3022,7 @@ class DiceTests: XCTestCase {
     }
 
     func testTempoTransformScalesTheDurationChoices() {
-        let section = Section { "C" }.durations(random: [.n4, .n2]).tempo(120)
+        let section = Section { "C" }.durations(random: [.n4, .n2]).tempo(60)
         let warp = 240.0 / 120.0
         XCTAssertEqual(section.notes.first?.durationChoices ?? [],
                        [Double.n4 * warp, Double.n2 * warp])
@@ -3189,12 +3188,12 @@ class GenerativeDiceTests: XCTestCase {
     // MARK: - Grid
 
     func testGridShapeAndCoordinates() {
-        let grid = Grid(bars: 2, beats: 4, subdivisions: 3) { $0.isDownbeat ? "x" : "." }
+        let grid = Grid(bars: 2, beats: 4, subdivisions: 3) { $0.isOnBeat ? "x" : "." }
         XCTAssertEqual(grid, "x..x..x..x.. | x..x..x..x..")
 
         var seen: [(Int, Int, Int, Int, Int)] = []
         _ = Grid(bars: 2, beats: 2, subdivisions: 2) { s in
-            seen.append((s.bar, s.beat, s.sub, s.step, s.index)); return "."
+            seen.append((s.bar, s.beat, s.sub, s.stepInBar, s.index)); return "."
         }
         XCTAssertEqual(seen.count, 8)
         XCTAssertEqual(seen[0].0, 0); XCTAssertEqual(seen[0].3, 0); XCTAssertEqual(seen[0].4, 0)
@@ -3208,9 +3207,9 @@ class GenerativeDiceTests: XCTestCase {
     func testGeneratedGridBecomesRealNotes() {
         let d = Dice(seed: 7)
         let ride = Grid(bars: 4, subdivisions: 3) { s in
-            if s.isDownbeat { return s.beat % 2 == 0 ? "X" : "x" }
+            if s.isOnBeat { return s.beat % 2 == 0 ? "X" : "x" }
             if s.sub == 2 && s.beat % 2 == 1 { return "x" }
-            return d.chance(0.3, 1, s.bar, s.step) ? "x" : "."
+            return d.chance(0.3, 1, s.bar, s.stepInBar) ? "x" : "."
         }
         let section = Section { Lane(.ride, ride) }
         let notes = section.notes.filter { $0.pitch != nil }
@@ -3228,7 +3227,7 @@ class GenerativeDiceTests: XCTestCase {
         func groove(seed: Int) -> String {
             let d = Dice(seed: seed)
             return Grid(bars: 8, subdivisions: 3) { s in
-                d.chance(0.25, 2, s.bar, s.step) ? "x" : "."
+                d.chance(0.25, 2, s.bar, s.stepInBar) ? "x" : "."
             }
         }
         XCTAssertEqual(groove(seed: 7), groove(seed: 7))
@@ -3334,8 +3333,8 @@ class EvolvingPassTests: XCTestCase {
     func testGeneratedFieldOfMaybesEvolves() {
         let d = Dice(seed: 7)
         let grid = Grid(bars: 4, subdivisions: 3) { s in
-            if s.isDownbeat { return "x" }
-            return d.chance(0.4, 1, s.bar, s.step) ? "4" : "."
+            if s.isOnBeat { return "x" }
+            return d.chance(0.4, 1, s.bar, s.stepInBar) ? "4" : "."
         }
         let notes = Section { Lane(.ride, grid) }.notes.filter { $0.pitch != nil }
         let sure = notes.filter { $0.dice == nil }
@@ -3669,7 +3668,7 @@ class PhraseTests: XCTestCase {
 
     func testPhraseLaysOutOneTokenPerSlot() {
         let phrase = Phrase(bars: 2, beats: 4, subdivisions: 1) { s in
-            s.isDownbeat ? String(s.beat + 1) : "-"
+            s.isOnBeat ? String(s.beat + 1) : "-"
         }
         XCTAssertEqual(phrase, "| 1 2 3 4 | 1 2 3 4 |")
     }
@@ -3682,7 +3681,7 @@ class PhraseTests: XCTestCase {
     func testStepCoordinatesMatchGrid() {
         var seen: [(Int, Int, Int, Int, Int)] = []
         _ = Phrase(bars: 2, beats: 2, subdivisions: 3) { s in
-            seen.append((s.bar, s.beat, s.sub, s.step, s.index)); return "1"
+            seen.append((s.bar, s.beat, s.sub, s.stepInBar, s.index)); return "1"
         }
         XCTAssertEqual(seen.count, 12)
         XCTAssertEqual(seen[0].0, 0); XCTAssertEqual(seen[0].1, 0); XCTAssertEqual(seen[0].2, 0)
@@ -3977,7 +3976,7 @@ class MarkovTests: XCTestCase {
                 "2": ["3", "1", "1", "1", "5", "3"],
                 "3": ["5", "2", "5", "-", "3", "2", "2"],
                 "5": ["5", "3", "3", "6", "3", "3"],
-                "6": ["5"]], start: "1", slots: 4)
+                "6": ["5"]], starts: ["1", "5", "1", "5", "3", "1"], slots: 4)
     }
 
     func testAPhrasePrintsTheChartItCounted() {
@@ -3992,21 +3991,65 @@ class MarkovTests: XCTestCase {
                        tableLines(Markov(from: source, order: 1).chart))
     }
 
-    func testOnlyTheOpeningIsLostInAChart() {
+    func testAChartKeepsEveryOpening() {
+        // An order-1 chart now carries the openings too, so a pasted chart is the same chain.
         let learned = Markov(from: source, order: 1)
-        XCTAssertTrue(learned.chart.split(separator: "\n")
-            .contains { $0.hasPrefix("// the phrase also opened on") },
-                      "several openings should be disclosed")
-        var compared = 0
+        XCTAssertTrue(learned.chart.contains("starts: [\"1\", \"5\", \"1\", \"5\", \"3\", \"1\"]"), learned.chart)
         for seed in 0..<200 {
-            let a = learned.melody(bars: 4, seed: seed)
-            let b = pastedSource.melody(bars: 4, seed: seed)
-            guard Markov.bars(of: a).flatMap({ $0 }).first
-                    == Markov.bars(of: b).flatMap({ $0 }).first else { continue }
-            compared += 1
-            XCTAssertEqual(a, b, "seed \(seed)")
+            XCTAssertEqual(learned.melody(bars: 4, seed: seed), pastedSource.melody(bars: 4, seed: seed),
+                           "seed \(seed)")
         }
-        XCTAssertGreaterThan(compared, 20, "no seeds shared an opening — the check proved nothing")
+    }
+
+    func testAnEndingIsWhereTheMelodyEnds() {
+        let m = Markov(from: source, order: 2)
+        for seed in 0..<50 {
+            let tokens = Markov.bars(of: m.melody(bars: 4, seed: seed, ending: ["1"])).flatMap { $0 }
+            XCTAssertEqual(tokens.last, "1", "seed \(seed)")
+        }
+    }
+
+    func testAnEndingDoesNotOpenTheLastSlot() {
+        let m = Markov(from: source, order: 1)
+        for seed in 0..<50 {
+            let tokens = Markov.bars(of: m.melody(bars: 2, seed: seed, open: 1, ending: ["1"])).flatMap { $0 }
+            XCTAssertEqual(tokens.last, "1", "seed \(seed)")
+        }
+    }
+
+    func testAnEndingChangesOnlyTheEnd() {
+        let m = Markov(from: source, order: 2)
+        let free = Markov.bars(of: m.melody(bars: 4, seed: 3)).flatMap { $0 }
+        let ended = Markov.bars(of: m.melody(bars: 4, seed: 3, ending: ["1"])).flatMap { $0 }
+        XCTAssertEqual(Array(free.dropLast()), Array(ended.dropLast()))
+    }
+
+    func testAMelodyCanRollFromAStream() {
+        let m = Markov(from: source, order: 2)
+        XCTAssertEqual(m.melody(bars: 4, seed: 7), m.melody(bars: 4, dice: Dice(seed: 7)))
+        XCTAssertNotEqual(m.melody(bars: 4, dice: Dice(seed: 7).stream("lead")),
+                          m.melody(bars: 4, dice: Dice(seed: 7).stream("answer")))
+    }
+
+    func testWeightedStartsAreEachAsLikely() {
+        let m = Markov([1: [2], 2: [1], 3: [1]], starts: [1, 1, 3])
+        var ones = 0
+        for seed in 0..<300 where Markov.bars(of: m.melody(bars: 1, seed: seed)).flatMap({ $0 }).first == "1" {
+            ones += 1
+        }
+        XCTAssertEqual(Double(ones) / 300, 2.0 / 3, accuracy: 0.08)
+    }
+
+    func testAnOrderOutOfRangeWarns() {
+        ScoreAdvisories.collected = []
+        _ = Markov(from: source, order: 9)
+        XCTAssertTrue(ScoreAdvisories.collected.contains { $0.message.contains("outside 1…4") })
+        ScoreAdvisories.collected = []
+    }
+
+    func testAChainPrintsAsItsChart() {
+        let m = Markov(from: "1 2 1 2 | 1 2 1 3")
+        XCTAssertEqual("\(m)", m.chart)
     }
 
     func testAHigherOrderChainSaysWhatThePrintLoses() {
@@ -4167,10 +4210,10 @@ class AutomationTests: XCTestCase {
     // MARK: surviving every transform that moves a note
 
     func testTempoWarpsTheCurveWithTheNotes() {
-        let section = Section { "C" }.automate(.volume, over: [0: 0, 1: 1]).tempo(120)
+        let section = Section { "C" }.automate(.volume, over: [0: 0, 1: 1]).tempo(60)
         let curve = section.notes.first?.automation?.first
         XCTAssertEqual(curve?.points.last?.time ?? 0, 2.0, accuracy: 1e-9,
-                       "240/120 — a fade left in whole notes would drift against a note in seconds")
+                       "120/60 — a fade left in whole notes would drift against a note in seconds")
     }
 
     func testDurationsRescaleTheSliceThroughScalingSlides() {
@@ -5379,4 +5422,111 @@ final class SessionPassTests: XCTestCase {
 // A chord's notes spelled as notation, for comparing against what a test expects.
 extension Chord {
     var noteNotations: [NoteNotation] { notes.map { NoteNotation(pitch: $0.pitch) } }
+}
+
+// MARK: - A section's own tempo, against the session's
+
+class SectionTempoTests: XCTestCase {
+    func testASectionAtTheSessionTempoIsUnchanged() {
+        let session = Session.build {
+            Session { Track("t") { Section { "| C D E F |" }.tempo(96) } }.tempo(96)
+        }
+        XCTAssertEqual(session.tracks[0].sections[0].duration, 1.0, accuracy: 1e-9)
+    }
+
+    func testHalfTheSessionTempoIsTwiceAsLong() {
+        let session = Session.build {
+            Session { Track("t") { Section { "| C D E F |" }.tempo(48) } }.tempo(96)
+        }
+        XCTAssertEqual(session.tracks[0].sections[0].duration, 2.0, accuracy: 1e-9)
+    }
+
+    func testTheBuilderIsLeftAsItWas() {
+        _ = Session.build { Session { Track("t") { Section { "C" } } }.tempo(90).timeSignature(3, 4) }
+        XCTAssertEqual(SectionBuilder.tempo, Session.defaultTempo)
+        XCTAssertEqual(SectionBuilder.timeSignature, .fourFour)
+    }
+
+    func testBarNotationReadsTheSessionsOwnMeter() {
+        // Without the second read, a 3/4 bar was parsed as a bar of 4/4.
+        let session = Session.build {
+            Session { Track("t") { Section { "| C D E |" } } }.timeSignature(.threeFour)
+        }
+        XCTAssertEqual(session.tracks[0].sections[0].duration, 0.75, accuracy: 1e-9)
+        XCTAssertEqual(session.tracks[0].sections[0].notes[0].duration, 0.25, accuracy: 1e-9)
+    }
+}
+
+
+// MARK: - Dice streams, steps and grid shape
+
+class DiceStreamTests: XCTestCase {
+    func testAStreamIsStableAndIndependent() {
+        let dice = Dice(seed: 7)
+        XCTAssertEqual(dice.stream("ride")(1, 2), dice.stream("ride")(1, 2))
+        XCTAssertNotEqual(dice.stream("ride")(1, 2), dice.stream("snare")(1, 2))
+        XCTAssertNotEqual(dice.stream("ride")(1, 2), dice(1, 2))
+    }
+
+    func testAStepIsItsBarAndPlaceInTheBar() {
+        let dice = Dice(seed: 3)
+        let step = GridStep(bar: 2, beat: 1, sub: 3, bars: 4)
+        XCTAssertEqual(dice(at: step), dice(2, 7))
+        XCTAssertEqual(dice.chance(0.5, at: step), dice.chance(0.5, 2, 7))
+        XCTAssertEqual(dice.int(in: 1...6, at: step), dice.int(in: 1...6, 2, 7))
+        XCTAssertEqual(dice.pick(["a", "b", "c"], at: step), dice.pick(["a", "b", "c"], 2, 7))
+    }
+
+    func testWrittenOutOptionsAlwaysAnswer() {
+        let dice = Dice(seed: 1)
+        for bar in 0..<20 {
+            XCTAssertTrue(["x", "o"].contains(dice.pick("x", "o", at: bar)))
+        }
+    }
+
+    func testAStreamIsEvenlySpread() {
+        let ride = Dice(seed: 11).stream("ride")
+        let hits = (0..<4000).filter { ride.chance(0.3, $0) }.count
+        XCTAssertEqual(Double(hits) / 4000, 0.3, accuracy: 0.03)
+    }
+}
+
+class GridStepTests: XCTestCase {
+    func testAGridWithoutBeatsCountsTheSessionsBeats() {
+        var grids: [String] = [], phrases: [String] = []
+        _ = Session.build {
+            grids.append(Grid(bars: 1, subdivisions: 1) { _ in "x" })
+            phrases.append(Phrase(bars: 1) { _ in "1" })
+            return Session { Track("t") { Section { "C" } } }.timeSignature(.threeFour)
+        }
+        XCTAssertEqual(grids.last, "xxx", "built in 3/4, a bar has three beats")
+        XCTAssertEqual(phrases.last, "| 1 1 1 |")
+        XCTAssertEqual(Grid(bars: 1, subdivisions: 1) { _ in "x" }, "xxxx", "outside a build, 4/4")
+    }
+
+    func testTheDownbeatIsTheBarsFirstBeat() {
+        let grid = Grid(bars: 2, beats: 4, subdivisions: 2) { $0.isDownbeat ? "X" : ($0.isOnBeat ? "x" : ".") }
+        XCTAssertEqual(grid, "X.x.x.x. | X.x.x.x.")
+    }
+
+    func testAStepKnowsTheShapeOfItsGrid() {
+        var last: [String] = []
+        _ = Grid(bars: 3, beats: 3, subdivisions: 2) { s in
+            if s.isLastBar && s.isLastBeat { last.append("\(s.bar).\(s.beat).\(s.sub)") }
+            XCTAssertEqual(s.bars, 3); XCTAssertEqual(s.beats, 3); XCTAssertEqual(s.subdivisions, 2)
+            return "."
+        }
+        XCTAssertEqual(last, ["2.2.0", "2.2.1"])
+    }
+
+    func testAPhraseStepKnowsItsShapeToo() {
+        let phrase = Phrase(bars: 2, beats: 2) { s in s.isLastBar && s.isLastBeat ? "1" : "-" }
+        XCTAssertEqual(phrase, "| - - | - 1 |")
+    }
+
+    func testABuiltStepCountsLikeAGeneratedOne() {
+        let step = GridStep(bar: 1, beat: 2, sub: 1, bars: 2, beats: 4, subdivisions: 4)
+        XCTAssertEqual(step.stepInBar, 9)
+        XCTAssertEqual(step.index, 25)
+    }
 }

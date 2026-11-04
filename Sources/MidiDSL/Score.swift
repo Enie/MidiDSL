@@ -4,12 +4,30 @@ import Foundation
 ///
 /// Mark a conforming type `@main`, and its ``session`` is what the program hands over when it runs.
 /// See <doc:WhatAScoreIs>.
+///
+/// ```swift
+/// import MidiDSL
+///
+/// @main
+/// struct Waltz: Score {
+///     var session: Session {
+///         Session {
+///             Track("melody") { Section { "| 1 2 3 | 5 - - |" } }
+///         }
+///         .timeSignature(.threeFour)
+///     }
+/// }
+/// ```
 public protocol Score {
+    /// Makes the score.
     init()
+    /// The piece.
     var session: Session { get }
 }
 
 public extension Score {
+    /// Builds the session and writes it out: as a MIDI file with `--midi <path>`, otherwise as
+    /// JSON. See <doc:WhatAScoreIs>.
     static func main() {
         ScoreRunner.run { Self().session }
     }
@@ -26,12 +44,16 @@ enum ScoreRunner {
             }
         }
 
+        if let value = path(after: "--tempo", in: arguments).flatMap(Double.init), value > 0 {
+            SectionBuilder.tempo = value
+        }
+
         if let list = path(after: "--sources-elsewhere", in: arguments) {
             SourceFiles.elsewhere = list.split(separator: ",").map(String.init)
         }
         SourceFiles.here = path(after: "--source-here", in: arguments)
 
-        let session = build()
+        let session = Session.build(build)
         let jsonPath = path(after: "--session-json", in: arguments)
 
         if let midiPath = path(after: "--midi", in: arguments) {

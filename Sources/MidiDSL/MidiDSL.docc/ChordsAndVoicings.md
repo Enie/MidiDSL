@@ -1,239 +1,79 @@
 # Chords and Voicings
 
-Chord names, qualities, voicings, strums and arpeggios.
+Chord names, qualities, extensions, strums and arpeggios.
 
 ## Overview
 
-A chord built from a root and a quality — either as explicit Swift values or parsed from notation. Chord modifiers mutate and return the same chord, so they chain.
-
-## Creating
-
-### Chord
+In notation a chord is just its name: `"| Am7 | Dm9 | Gdom7 | Cmaj7 |"`. Build a ``Chord`` in Swift when code chooses the chord or changes it.
 
 ```swift
-Chord(_ root: String, _ quality: ChordQuality, _ duration: MusicTimeStamp = 1.0)
-```
-
-- term `root`: The chord's root as a note name — "C", "F#", "Bb". An octave may be written on it ("C4"); without one the chord sits in the default register.
-- term `quality`: Which intervals stack on the root: .major, .minor, .dominant7, .major7, .sus4, .custom(…) and the rest. The quality is in semitones, so it does not move when a key changes.
-- term `duration`: How long every note of the chord rings, in whole notes. A whole note unless given.
-
-Root name ("C", "F#", "Bb") plus quality.
-
-```swift
-Chord("C", .minor7)
-```
-
-### Chord
-
-```swift
-Chord(_ notation: String, _ duration: MusicTimeStamp = 1.0)
-```
-
-- term `notation`: Root and quality in one string — "Cmaj7", "F#m7", "Bbm7b5" — using the quality suffixes listed below. No octave can be written here; the chord sits in the default register.
-- term `duration`: How long every note of the chord rings, in whole notes.
-
-Parsed from notation like "Cmaj7" or "F#m7". The initializer is failable: it returns nil when the string does not start with a note name. A suffix it does not recognise gives a major chord, so "C6" and "C9" here are C major — write "Cmaj6" and "Cdom9".
-
-```swift
-if let chord = Chord("Bbm7b5") {
-    // B♭ half-diminished
+Section {
+    Chord("A", .minor7, 0.5).arpeggio(over: 0.25)
+    Chord("D", .minor9, 0.5).natural()
 }
 ```
 
-## ChordQuality
+``Chord/init(_:_:_:)`` takes a root and a ``ChordQuality``; ``Chord/init(_:_:)`` reads a chord symbol such as `"F#m7"` or `"Bbm7b5"`. The symbol form fails, returning `nil`, when the string does not start with a note name. A root without an octave is in octave 5.
 
-### .major
+Chord modifiers change the chord and return it, so they chain.
 
-0 4 7 — notation: (empty), M, maj.
+## Chord symbols
 
-### .minor
+A symbol is a root followed by a quality. Each case of ``ChordQuality`` lists its spellings; the common ones:
 
-0 3 7 — notation: m, mi, min, − (minus sign).
-
-### .diminished
-
-0 3 6 — notation: dim, o.
-
-### .augmented
-
-0 4 8 — notation: aug, +.
-
-### .dominant7
-
-0 4 7 10 — notation: 7, dom7, dom.
-
-### .major7
-
-0 4 7 11 — notation: M7, maj7, Δ7, Δ.
-
-### .minor7
-
-0 3 7 10 — notation: m7, mi7, min7, −7.
-
-### .halfDiminished
-
-0 3 6 10 — notation: ø7, ø, m7b5.
-
-### .diminished7
-
-0 3 6 9 — notation: o7, dim7.
-
-### .add9
-
-0 4 7 14 — notation: add9.
-
-### .add11
-
-0 4 7 17 — notation: add11.
-
-### .sus4
-
-0 5 7 — notation: sus4, sus.
-
-### .sus2
-
-0 2 7 — notation: sus2.
-
-### .majorSixth
-
-0 4 7 9 — notation: maj6, M6, 6th ("C6" is a pitch, never this chord).
-
-### .minorSixth
-
-0 3 7 9 — notation: m6, mi6, min6, −6.
-
-### .dominant7sus4
-
-0 5 7 10 — notation: 7sus4, dom7sus4.
-
-### .power
-
-0 7 — notation: pow, no3 ("C5" is a pitch, never this chord).
-
-### Extended and altered
-
-| Quality | Intervals | Notation |
+| Quality | Tones above the root | Spellings |
 |---|---|---|
-| .dominant9 | 0 4 7 10 14 | dom9 |
-| .major9 | 0 4 7 11 14 | M9, maj9, Δ9 |
-| .minor9 | 0 3 7 10 14 | m9, mi9, min9 |
-| .minor11 | 0 3 7 10 14 17 | m11, mi11, min11 |
-| .dominant11 | 0 7 10 14 17 | 11, dom11 |
-| .major11 | 0 7 11 14 17 | maj11, M11 |
-| .dominant13 | 0 4 7 10 14 21 | 13, dom13 |
-| .major13 | 0 4 7 11 14 21 | maj13, M13 |
-| .minor13 | 0 3 7 10 14 21 | m13, mi13, min13 |
-| .sixNine | 0 4 7 9 14 | 69, 6/9, 6add9 |
-| .minorMajor7 | 0 3 7 11 | mMaj7, mM7, minMaj7 |
-| .augmented7 | 0 4 8 10 | aug7, +7 |
-| .augmentedMajor7 | 0 4 8 11 | augMaj7, augM7, +M7 |
-| .minorAdd9 | 0 3 7 14 | madd9, minadd9 |
-| .dominant9sus4 | 0 5 7 10 14 | 9sus4, dom9sus4 |
+| `.major` | 0 4 7 | (nothing), `M`, `maj` |
+| `.minor` | 0 3 7 | `m`, `mi`, `min` |
+| `.diminished` | 0 3 6 | `dim`, `o` |
+| `.augmented` | 0 4 8 | `aug`, `+` |
+| `.dominant7` | 0 4 7 10 | `7`, `dom7`, `dom` |
+| `.major7` | 0 4 7 11 | `maj7`, `M7`, `Δ7`, `Δ` |
+| `.minor7` | 0 3 7 10 | `m7`, `min7` |
+| `.halfDiminished` | 0 3 6 10 | `m7b5`, `ø7`, `ø` |
+| `.diminished7` | 0 3 6 9 | `dim7`, `o7` |
+| `.sus4` / `.sus2` | 0 5 7 / 0 2 7 | `sus4`, `sus` / `sus2` |
+| `.majorSixth` / `.minorSixth` | 0 4 7 9 / 0 3 7 9 | `maj6`, `M6`, `6th` / `m6`, `min6` |
+| `.dominant9` | 0 4 7 10 14 | `dom9` |
+| `.major9` / `.minor9` | 0 4 7 11 14 / 0 3 7 10 14 | `maj9`, `M9` / `m9`, `min9` |
+| `.dominant13` | 0 4 7 10 14 21 | `13`, `dom13` |
+| `.power` | 0 7 | `pow`, `no3` |
 
-The eleventh chords leave out the third, which clashes with the eleventh. A dominant ninth has no bare "9" spelling because "C9" is a pitch.
+Tones are semitones above the root. The eleventh chords leave out the third, which clashes with the eleventh.
 
-### .custom
+Some spellings are taken by pitches. In notation `"C6"`, `"C5"` and `"C9"` are the note C in octaves 6, 5 and 9, so the sixth chord is `"Cmaj6"`, the power chord `"Cpow"` and the dominant ninth `"Cdom9"`. ``Chord/init(_:_:)`` reads a quality it does not know as major, so `Chord("C9")` is a C major triad.
 
-```swift
-.custom("0,4,7,10,14")
-```
+A symbol with altered tones, such as `"C7b9"` or `"Cm7#5"`, becomes a ``ChordQuality/custom(_:)`` quality, and so can any stack of semitones: `.custom("0,4,7,10,14")`.
 
-Any interval stack, comma-separated semitones from the root. Altered tokens like "C7b9" parse to a custom quality.
+## Extensions
 
-## Modifiers
-
-### .duration()
-
-```swift
-duration(_ duration: MusicTimeStamp) -> Chord
-```
-
-- term `duration`: One length for every note of the chord, in whole notes. Start times are left alone, so an arpeggio stays an arpeggio.
-
-Sets every chord note to the same duration.
-
-### .velocities()
-
-```swift
-velocities(_ velocities: UInt32...) -> Chord
-```
-
-- term `velocities`: One value per note, 0–127, in the chord's own note order: the quality's tones from the root up, then any extensions in the order they were added. Notes past the end of the list keep what they had, so a short list voices only the bottom of the chord.
-
-Per-note velocities, in the chord's note order. Notes beyond the list keep their current velocity.
-
-### .natural()
-
-```swift
-natural() -> Chord
-```
-
-Humanizes velocities: each note gets 80 plus a small variation (0–10), and the lowest note 15 more. The variation comes from ``Dice``, so the chord sounds the same on every compile.
-
-### .ext()
-
-```swift
-ext(_ extensions: String...) -> Chord
-```
-
-- term `extensions`: Tones to add above the chord: "7", "b7", "maj7", "9", "b9", "#9", "11", "#11", "13", "b13", "b5", "#5". An altered fifth replaces the natural one; anything already in the chord, and any token not in this list, is ignored.
-
-Adds jazz extension tones. "b7" and "maj7" name the seventh outright; a bare "7" adds the one the quality implies — a major seventh on a major, augmented or add9 chord, a diminished seventh on a diminished one, a minor seventh otherwise — and nothing on a chord that already has a seventh.
+``Chord/ext(_:)`` adds tones named as extensions: `"7"`, `"b7"`, `"maj7"`, `"9"`, `"b9"`, `"#9"`, `"11"`, `"#11"`, `"13"` and `"b13"`, and `"b5"` or `"#5"`, which replace the fifth. A tone the chord already has, and a name it does not know, are skipped.
 
 ```swift
 Chord("C", .dominant7).ext("b9", "#11")
 ```
 
+`"b7"` and `"maj7"` name the seventh outright. A bare `"7"` adds the seventh of the chord's own scale: major on a major, augmented or add9 chord, diminished on a diminished one, minor otherwise, and nothing if the chord already has a sixth or seventh.
+
+## Voicing
+
+``Chord/velocities(_:)`` gives each tone its own velocity, in the chord's own order: the quality's tones from the root up, then the extensions in the order they were added. ``Chord/natural()`` gives the tones the slightly uneven velocities of a played chord, the same on every build. ``Chord/duration(_:)`` and ``Chord/durations(_:)`` set how long the tones ring.
+
 ## Arpeggios
 
-### .arpeggio()
+``Chord/arpeggio(_:delay:)`` starts each tone a fixed delay after the one before, in the order an ``ArpeggioPattern`` gives. Each tone keeps its length, so the last one ends later than the first. ``Chord/arpeggio(over:pattern:)`` spreads the tones evenly across a span instead.
 
 ```swift
-arpeggio(_ pattern: ArpeggioPattern = .up, delay: MusicTimeStamp = 0.05) -> Chord
+Chord("C", .major7).arpeggio(.up, delay: 0.05)       // a quick strum
+Chord("C", .major7).arpeggio(over: 0.5, pattern: .alternating)
 ```
 
-- term `pattern`: The order the notes enter: .up, .down, .alternating, .random, .rootFirst, .rootLast, .custom([Int]).
-- term `delay`: The gap between one note and the next, in whole notes — a fixed strum, independent of how long the chord is. 0.05 is tight.
+The patterns sort the tones by pitch: `.up`, `.down`, `.alternating` (lowest, highest, then the middle rising), `.rootFirst` and `.rootLast`. `.random` shuffles them the same way on every build. `.custom([Int])` plays them in the order you list, by index into the chord as built, so `[0, 2, 1]` on a triad is root, fifth, third.
 
-Staggers the chord notes by a fixed delay in the given order. Each note keeps its own length, so the last one ends later than the first.
+``Chord/arpeggioUp(delay:)``, ``Chord/arpeggioDown(delay:)`` and ``Chord/arpeggioCustom(_:delay:)`` are shorthands. Notation has its own marks for all of this; see <doc:StringNotation>.
 
-### .arpeggio(over:)
+## Topics
 
-```swift
-arpeggio(over totalDuration: MusicTimeStamp, pattern: ArpeggioPattern = .up) -> Chord
-```
-
-- term `over`: How long the whole roll takes, in whole notes; the notes are spread evenly across it whatever the chord's own length is.
-- term `pattern`: The order the notes enter.
-
-Spreads the notes evenly across a total duration.
-
-### .arpeggioUp() / .arpeggioDown()
-
-```swift
-arpeggioUp(delay: MusicTimeStamp = 0.05)
-```
-
-- term `delay`: The gap between one note and the next, in whole notes. The pattern is fixed by which of the two you call.
-
-Shorthand for .arpeggio(.up) / .arpeggio(.down).
-
-### .arpeggioCustom()
-
-```swift
-arpeggioCustom(_ order: [Int], delay: MusicTimeStamp = 0.05)
-```
-
-- term `order`: The indices to play, in the order to play them — 0-based, in the chord's own note order (as for .velocities()). On a triad [0, 2, 1] plays root, fifth, third. An index past the last note is skipped.
-- term `delay`: The gap between one note and the next, in whole notes.
-
-Notes in an explicit index order. The other patterns sort by pitch first; this one does not, so on a chord extended out of order an index names the note as it was added.
-
-### ArpeggioPattern
-
-```swift
-.up .down .random .alternating .rootFirst .rootLast .custom([Int])
-```
-
-.alternating plays low, high, then the middle notes upward; .rootFirst/.rootLast pin the root at either end. .random is shuffled by ``Dice``, so it is the same on every compile.
+- ``Chord``
+- ``ChordQuality``
+- ``ArpeggioPattern``

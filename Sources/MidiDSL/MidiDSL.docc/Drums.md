@@ -4,22 +4,10 @@ Step-grid lanes on General MIDI drum keys.
 
 ## Overview
 
-Drum grooves are written as step-sequencer lanes: one lane per kit piece, one character per step. The lanes in a Section are parallel layers over the same bar grid. Put them on a track whose instrument is .drums(...) — the General MIDI percussion channel, where every key is a kit piece and the kit itself is chosen per track.
-
-## Lanes
-
-### Kick / Snare / Hat / OpenHat / Clap / Crash / Ride
+A groove is written as lanes, one per kit piece and one character per step, like a drum machine. The lanes in a section are layers over the same bars. Put them on a track whose instrument is ``Instrument/drums(_:)``: it is written on channel 10, where every General MIDI player keeps its kit, and the kit is chosen by program.
 
 ```swift
-Kick(_ grid: String) …
-```
-
-- term `grid`: The step string: x hit, X accent, o ghost, . or - rest, ? a hit half the time, 1–9 a hit that many times in ten (rolled by ``Dice``, the same on every compile). | separates bars and spaces only group for the eye. Each bar divides evenly by its own step count, so 16 characters are sixteenths and 8 are eighths.
-
-One rhythm layer on the everyday kit piece the name says. The grid reads like a drum machine: x hit, X accent, o ghost note, . (or -) rest. Spaces just group steps; | separates bars. Each bar's step characters divide it evenly — 16 characters are sixteenths, 8 are eighths; a grid with no | is one bar.
-
-```swift
-Track(name: "drums", instrument: .drums()) {
+Track("drums", instrument: .drums()) {
     Section {
         Kick( "x... .... x.x. ....")
         Snare(".... x..o .... x...")
@@ -28,116 +16,95 @@ Track(name: "drums", instrument: .drums()) {
 }
 ```
 
-### Lane
+## Reading a grid
 
-```swift
-Lane(_ piece: DrumPiece, _ grid: String)
-```
+| Character | Plays |
+|---|---|
+| `x` | a hit, velocity 100 |
+| `X` | an accent, velocity 120 |
+| `o` | a ghost note, velocity 55 |
+| `?` | a hit on about half the passes |
+| `1`…`9` | a hit on about that many passes in ten |
+| `.` or `-` | a rest |
 
-- term `piece`: Which GM percussion key the lane strikes — .cowbell, .rideBell, .tambourine, .highTom and the rest of the map. DrumPiece(key:) reaches one the list doesn't name.
-- term `grid`: The step string, read exactly as for Kick and the other named lanes.
+`|` separates bars, and spaces only group steps for the eye. Each bar divides evenly by its own number of steps, so 16 steps are sixteenths and 8 are eighths, in the session's meter. A grid without `|` is one bar.
 
-A lane for any General MIDI kit piece: .cowbell, .rideBell, .clap, .tambourine, .highTom … .lowFloorTom, .highBongo, .claves, and the rest of the GM percussion map. DrumPiece(key:) reaches unnamed keys.
+The `?` and digit steps are rolled by ``Dice`` on every pass. Each step rolls its own die, so two lanes never start agreeing, and the rolls are the same on every build. See <doc:DiceAndChance>.
+
+## Lanes
+
+``Kick(_:)``, ``Snare(_:)``, ``Hat(_:)``, ``OpenHat(_:)``, ``Clap(_:)``, ``Crash(_:)`` and ``Ride(_:)`` name the everyday pieces. ``Lane(_:_:)`` plays any other ``DrumPiece``: `.cowbell`, `.rideBell`, `.tambourine`, `.highTom`, `.claves` and the rest of the General MIDI percussion keys. ``DrumPiece/init(key:)`` reaches a key without a name.
 
 ```swift
 Lane(.cowbell, "..x. .... ..x. ....")
 ```
 
-### .volume()
+## Balancing lanes
 
-```swift
-volume(_ level: Double) -> DrumLane
-```
-
-- term `level`: This lane against the others in the same groove. 1.0 is as written; below sits it back, above pushes it towards the velocity ceiling. It scales the lane's velocities at expansion time, so hit, accent and ghost keep their ratio, and it multiplies with Section .velocity(scale:) and Track .volume().
-
-Sits one lane under or over the others. 1.0 is the lane as written; above 1.0 pushes it, up to the velocity ceiling. Every lane of a groove plays on the same track and MIDI channel, so there is no fader per lane: this scales the velocities that lane's steps play at. The hit/accent/ghost ratio inside the lane stays as written (100, 120 and 55 before scaling), and a kit may answer velocity with a different sample as well as a softer one, which makes it an accent balance rather than a calibrated fader. Multiplies with Section .velocity(scale:) and Track .volume().
+All the lanes of a groove play on one track, so there is no fader per lane. ``DrumLane/volume(_:)`` scales the velocities a lane plays at instead. Hits, accents and ghosts keep their ratio, and a kit may answer a softer velocity with a different sample, so treat it as an accent balance rather than a calibrated fader.
 
 ```swift
 Section {
     Kick( "x... x...").volume(0.9)
     Snare(".... x...")
-    Hat(  "x.x. x.x.").volume(0.45)   // ride under everything
+    Hat(  "x.x. x.x.").volume(0.45)   // under everything
 }
 ```
 
-### .mute()
+``DrumLane/mute(_:)`` silences a lane and keeps its bars, so muting the longest lane does not shorten the section.
 
-```swift
-mute(_ on: Bool = true) -> DrumLane
-```
-
-- term `on`: true drops the lane's hits, false brings them back. The bars still hold their time either way, so muting the longest lane can't shorten the section under the others.
-
-Takes one lane out of the groove without deleting it — the counterpart to .volume(): where that scales the lane's hits, this drops them altogether. The lane's bars still hold their time, so muting the longest lane doesn't shorten the section under the others, and the written grid stays as the record of what comes back when the modifier goes.
-
-```swift
-Hat("x.x. x.x.").mute()
-```
-
-### .automate()
-
-```swift
-automate(_ target: AutomationTarget, over breakpoints: [Double: Double], curve: AutomationShape = .linear) -> DrumLane
-```
-
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
-- term `over`: time: value, with the time as a fraction of this lane's own written grid — 0 its first step, 1 the end of its last bar, trailing rests included. at:, bars: and beats: are the other three spellings, exactly as on a section.
-- term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
-
-Moves a parameter over this lane — a hat that swells across the bar, a filter opening under the groove. .volume is the one that is genuinely this lane's: it is sliced onto this lane's own hits, so one voice of a groove swells while the others hold. It is the moving twin of .volume(level) — that one scales the lane's velocities once, this one draws them over time — and where both are written they multiply. Every other target moves something the whole track shares (one filter, one reverb node, one MIDI channel), so .cutoff written on the hats sweeps the kick with it, and two lanes moving the same target is a contest the later-written one wins. One caveat that is not this modifier's own: on a General MIDI kit a per-voice curve can only travel as CC 11 (expression), and a controller is per-channel, so the most recently faded hit owns the expression for every piece of the kit.
+``DrumLane/automate(_:over:curve:)`` moves a parameter over one lane. A `.volume` curve is the lane's own, so one piece of the kit swells while the others hold, and it multiplies with `.volume(_:)`. Every other target moves something the whole track shares, so a `.cutoff` curve written on the hats sweeps the kick too.
 
 ```swift
 Hat("x.x. x.x. x.x. x.x.").automate(.volume, over: [0: 0.3, 1: 1.0])
-Kick("x... x...").automate(.cutoff, bars: [0: 400, 2: 6000])
 ```
 
-### Generated grids
+In a MIDI file a lane's volume curve travels as expression, which is one value per channel. On a drum track the most recently shaped hit sets it for every piece of the kit.
+
+## Grids written by code
+
+A grid is a string, so code can write it. ``Grid(bars:beats:subdivisions:_:)`` calls a closure once for every step and joins the answers:
 
 ```swift
-Lane(.ride, Grid(bars: 8) { … })
+Lane(.ride, Grid(bars: 8, subdivisions: 3) { step in step.isOnBeat ? "x" : "." })
 ```
 
-A grid is just a string, so it can be built by code instead of typed: Grid() fills one step by step from a closure, which is how a part gets generated rather than written out. See Generating Parts.
+See <doc:GeneratingParts>.
 
 ## A piece in a notation string
 
-### \(.kick)
+Where a drum has to be a note, in a Markov chain's training or a ``Phrase(bars:beats:subdivisions:_:)`` closure, interpolate the piece. It is written as a note name, the kick as C3, so no key moves it; a bare number in notation would be a scale degree.
 
 ```swift
-"\(.kick) \(.closedHat) [\(.snare) \(.closedHat)]"
+let line = Phrase(bars: 2) { _ in "[\(.kick) \(.closedHat)]" }
 ```
 
-A kit piece written into notation by name, for the parts that are notes rather than a step grid — a Markov chain's training, a Phrase closure, anywhere a drum has to be a token. It arrives as a pitch name (the kick is C3), never a number: a bare number in notation is a degree, while a name is read absolutely, so no .key(...) at any level moves it. The bare leading dot resolves because this overload is what gives it a type. In a literal you would otherwise type out, Lane(.kick, "x... x...") names the same piece.
-
-```swift
-Phrase(bars: 2) { _ in "[\(.kick) \(.closedHat)]" }
-```
-
-### .spelling
-
-```swift
-DrumPiece.spelling: NoteNotation
-```
-
-The piece as notation spells its pitch — .kick is C3, .closedHat is F#3. What the interpolation above writes, for when the string is being assembled rather than interpolated into.
+``DrumPiece/spelling`` is the same name as a string:
 
 ```swift
 DrumPiece.slot(3).spelling   // "D#3"
 ```
 
+An interpolated string loses the link between its notes and the characters you typed, so in a hand-written part prefer a lane.
+
 ## Kits
 
-### Instrument.drums()
-
-```swift
-Instrument.drums(_ kit: DrumKit = .standard)
-```
-
-- term `kit`: Which General MIDI kit the whole track plays — .standard, .room, .power, .electronic, .tr808, .jazz, .brush, .orchestra. The kit is the program; each lane's piece is the key.
-
-A drum track: written on channel 10, where every General MIDI player keeps its kit, with the kit chosen by a program change. Plain notes on GM keys (36 kick, 38 snare, 42 closed hat…) play through the same kit.
+``DrumKit`` names the General MIDI kits: `.standard`, `.room`, `.power`, `.electronic`, `.tr808`, `.jazz`, `.brush` and `.orchestra`. The kit is the track's program, and each lane's piece is the key it strikes. Plain notes on the drum keys play through the same kit.
 
 ```swift
 Track("drums", instrument: .drums(.tr808)) { … }
 ```
+
+## Topics
+
+- ``DrumLane``
+- ``DrumPiece``
+- ``DrumKit``
+- ``Lane(_:_:)``
+- ``Kick(_:)``
+- ``Snare(_:)``
+- ``Hat(_:)``
+- ``OpenHat(_:)``
+- ``Clap(_:)``
+- ``Crash(_:)``
+- ``Ride(_:)``

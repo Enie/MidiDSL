@@ -23,55 +23,23 @@ A track without one sends no program change, so the player keeps its default, us
 
 ## Choosing a sound
 
-### Instrument.generalMIDI()
+``Instrument/generalMIDI(_:bank:)`` names a melodic sound by its General MIDI program, 0…127. Programs count from 0, as the byte in the file does: 0 is the acoustic grand piano, 33 the fingered electric bass, 48 the string ensemble. A chart that numbers them from 1 is one higher. A bank other than 0 is sent as a bank select before the program.
+
+``Instrument/drums(_:)`` makes a drum track. It is written on channel 10, where every General MIDI player keeps its kit, so the lanes' keys (36 kick, 38 snare, 42 closed hat…) play as drums as soon as the file opens. The ``DrumKit`` is the program; see <doc:Drums>.
+
+``Instrument/init(_:program:bank:percussion:)`` is the same description with a name of your own.
+
+Name a sound once and share it, or set it after the block with ``Track/instrument(_:)``:
 
 ```swift
-Instrument.generalMIDI(_ program: Int, bank: Int = 0)
-```
-
-- term `program`: The General MIDI program, 0–127. It counts from 0, as the byte in the file does: 0 is the acoustic grand piano, 33 the fingered electric bass, 48 the string ensemble. A chart that numbers from 1 is one higher.
-- term `bank`: The bank to choose it from, sent as a bank select (controller 0 and 32) before the program. 0, the General MIDI bank, sends none.
-
-A melodic instrument. The file opens the track with a program change, before its first note.
-
-### Instrument.drums()
-
-```swift
-Instrument.drums(_ kit: DrumKit = .standard)
-```
-
-- term `kit`: Which General MIDI kit: .standard, .room, .power, .electronic, .tr808, .jazz, .brush, .orchestra. The kit is the program; each lane's piece is the key.
-
-A drum track. It is written on channel 10, where every General MIDI player keeps its kit, so the lanes' keys (36 kick, 38 snare, 42 closed hat…) play as drums the moment the file opens. Several drum tracks share the channel.
-
-### Instrument()
-
-```swift
-Instrument(_ name: String, program: Int? = nil, bank: Int = 0, percussion: Bool = false)
-```
-
-- term `name`: What the sound is called.
-- term `program`: The General MIDI program, or nil to send none.
-- term `bank`: The bank, as for .generalMIDI(_:bank:).
-- term `percussion`: Whether the track is drums, on channel 10.
-
-The same description with a name of its own.
-
-### .instrument()
-
-```swift
-instrument(_ instrument: Instrument) -> Track
-```
-
-Gives a track its instrument after the block rather than in the header.
-
-```swift
+let keys = Instrument.generalMIDI(4)          // electric piano
+Track("keys", instrument: keys) { … }
 Track("lead") { … }.instrument(.generalMIDI(81))
 ```
 
 ## Channels
 
-Drum tracks are written on channel 10. Every other track takes the next free channel in the order the session lists them, stepping over 10 and wrapping after sixteen, so a piece with more than fifteen melodic tracks shares channels.
+Drum tracks are written on channel 10, and several drum tracks share it. Every other track takes the next free channel in the order the session lists them, stepping over 10 and wrapping after sixteen, so a piece with more than fifteen melodic tracks shares channels.
 
 ## Topics
 

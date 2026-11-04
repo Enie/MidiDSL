@@ -30,9 +30,9 @@ Make the property computed instead. Anything you would have written above the `S
 @main
 struct Generated: Score {
     var session: Session {
-        let d = Dice(seed: 7)
-        let hats = Grid(bars: 2, subdivisions: 4) { step in
-            d.chance(0.4, 1, step.index) ? "x" : "."
+        let hat = Dice(seed: 7).stream("hat")
+        let hats = Grid(bars: 2) { step in
+            hat.chance(0.4, at: step) ? "x" : "."
         }
         return Session {
             Track("drums", instrument: .drums()) {
@@ -71,7 +71,10 @@ struct Combo: Score {
 | *(none)* | The `Session` is written to standard output as JSON. |
 | `--session-json <path>` | The JSON goes to a file instead, which leaves standard output free for the score's own `print(...)`. |
 | `--midi <path>` | Writes a Standard MIDI File of the whole form. Given without `--session-json`, nothing else is printed. |
-| `--time-signature <n>/<d>` | The meter that bar notation is read in before the session states its own. |
+| `--time-signature <n>/<d>` | The meter the score is first built in. |
+| `--tempo <bpm>` | The tempo the score is first built in. |
+
+A session states its meter and tempo after its body, as modifiers, but bar notation, `Loop(bars:)` and ``Section/tempo(_:)`` need them while the body is built. So the score is built once to read them and, if they differ from what it was built in, once more; ``Session/build(_:)`` does this. The two arguments only save the second build when you already know the answer.
 
 The JSON holds every note with its pitch, start, duration and velocity, plus the line and column it was written at. Any program can use a score this way: compile the file as written, run it, and read the `Session` back, with nothing added to the score.
 

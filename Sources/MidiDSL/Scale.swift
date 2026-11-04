@@ -4,9 +4,34 @@ import Foundation
 ///
 /// See <doc:ProgressionsAndScales>.
 public enum ScaleMode: String, Codable, CaseIterable, Hashable {
-    case major, minor, dorian, phrygian, lydian, mixolydian, locrian
-    case harmonicMinor, melodicMinor
-    case majorPentatonic, minorPentatonic, blues, wholeTone, chromatic
+    /// Major, the Ionian mode: 1 2 3 4 5 6 7.
+    case major
+    /// Natural minor, the Aeolian mode: 1 2 b3 4 5 b6 b7.
+    case minor
+    /// Dorian: 1 2 b3 4 5 6 b7.
+    case dorian
+    /// Phrygian: 1 b2 b3 4 5 b6 b7.
+    case phrygian
+    /// Lydian: 1 2 3 #4 5 6 7.
+    case lydian
+    /// Mixolydian: 1 2 3 4 5 6 b7.
+    case mixolydian
+    /// Locrian: 1 b2 b3 4 b5 b6 b7.
+    case locrian
+    /// Harmonic minor: 1 2 b3 4 5 b6 7.
+    case harmonicMinor
+    /// Melodic minor, as it rises: 1 2 b3 4 5 6 7.
+    case melodicMinor
+    /// Major pentatonic, five notes: 1 2 3 5 6.
+    case majorPentatonic
+    /// Minor pentatonic, five notes: 1 b3 4 5 b7.
+    case minorPentatonic
+    /// Blues, six notes: 1 b3 4 b5 5 b7.
+    case blues
+    /// Whole tone, six notes a whole step apart.
+    case wholeTone
+    /// Chromatic, all twelve semitones.
+    case chromatic
 
     @_documentation(visibility: internal)
     public var steps: [Int] {
@@ -47,18 +72,49 @@ public struct ScaleDegree: Equatable, Hashable, Codable {
 
 /// A key: a root and a mode, which scale-degree notation is read in.
 ///
+/// Degree numbers count through the scale: in `Scale(.D4, .major)`, `1` is D4, `3` is F#4 and
+/// `8` the D above. A scale with fewer notes counts through fewer: in a pentatonic, `6` is the
+/// root an octave up.
+///
+/// ```swift
+/// Section { "| 1 2 3 5 | 6 5 3 - |" }.key(Scale(.A3, .minorPentatonic))
+/// ```
+///
 /// See <doc:ProgressionsAndScales>.
+///
+/// ## Topics
+///
+/// ### Making a scale
+///
+/// - ``init(_:_:)-5xqf2``
+/// - ``init(_:_:)-108iy``
+/// - ``ScaleMode``
+///
+/// ### Its notes
+///
+/// - ``pitches``
 public struct Scale: Equatable, Hashable, Codable {
     @_documentation(visibility: internal)
     public var root: Pitch
     @_documentation(visibility: internal)
     public var mode: ScaleMode
 
+    /// A scale from a root pitch and a mode.
+    ///
+    /// - Parameters:
+    ///   - root: Degree 1, as a pitch.
+    ///   - mode: The steps above it.
     public init(_ root: Pitch, _ mode: ScaleMode) {
         self.root = root
         self.mode = mode
     }
 
+    /// A scale from a root note name and a mode.
+    ///
+    /// - Parameters:
+    ///   - root: Degree 1, as a note name such as `"D4"`. A name without an octave is in octave 5,
+    ///     and a name that is not a note is C5.
+    ///   - mode: The steps above it.
     public init(_ root: NoteNotation, _ mode: ScaleMode) {
         self.init(pitchForNoteName(root) ?? 60, mode)
     }
@@ -74,7 +130,11 @@ public struct Scale: Equatable, Hashable, Codable {
         return Pitch(min(max(value, 0), 127))
     }
 
-    @_documentation(visibility: internal)
+    /// The scale's notes, one per degree, from the root up.
+    ///
+    /// ```swift
+    /// Scale(.D5, .minorPentatonic).pitches   // D5 F5 G5 A5 C6, as MIDI numbers
+    /// ```
     public var pitches: [Pitch] {
         (1...mode.degreeCount).map { pitch(ScaleDegree(degree: $0)) }
     }

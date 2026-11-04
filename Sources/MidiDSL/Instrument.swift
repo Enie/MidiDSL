@@ -16,9 +16,6 @@ import Foundation
 /// 33 the fingered electric bass, 48 the string ensemble. A General MIDI chart that counts
 /// from 1 is one higher.
 ///
-/// A program that makes its own sounds can attach them to the same instrument; a MIDI file
-/// leaves them out.
-///
 /// See <doc:Instruments>.
 public struct Instrument: Codable, Equatable {
     /// The name the track's sound goes by.
@@ -37,6 +34,12 @@ public struct Instrument: Codable, Equatable {
     public var sound: (any HostSound)?
 
     /// An instrument by name, with the General MIDI program a MIDI file should open it as.
+    ///
+    /// - Parameters:
+    ///   - name: The name the track's sound goes by.
+    ///   - program: The General MIDI program, 0…127. `nil` sends no program change.
+    ///   - bank: The bank the program is chosen from, 0…16383. 0 is the General MIDI bank.
+    ///   - percussion: `true` writes the track on channel 10, as drums.
     public init(_ name: String, program: Int? = nil, bank: Int = 0, percussion: Bool = false) {
         self.init(name: name, program: program, bank: bank, percussion: percussion)
     }
@@ -52,11 +55,19 @@ public struct Instrument: Codable, Equatable {
     }
 
     /// A General MIDI instrument, by its program number (counting from 0).
+    ///
+    /// - Parameters:
+    ///   - program: The program, 0…127: 0 is the acoustic grand piano, 33 the fingered bass.
+    ///   - bank: The bank the program is chosen from. 0 is the General MIDI bank.
+    /// - Returns: The instrument.
     public static func generalMIDI(_ program: Int, bank: Int = 0) -> Instrument {
         Instrument("program \(program)", program: program, bank: bank)
     }
 
     /// A General MIDI drum kit, on channel 10.
+    ///
+    /// - Parameter kit: Which kit plays. Each lane's ``DrumPiece`` picks the key.
+    /// - Returns: The instrument.
     public static func drums(_ kit: DrumKit = .standard) -> Instrument {
         Instrument("drums", program: kit.rawValue, percussion: true)
     }

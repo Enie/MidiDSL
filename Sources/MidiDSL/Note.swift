@@ -83,7 +83,14 @@ public extension NoteNotation {
 ///
 /// See <doc:NotesRestsAndNoteSets>.
 public enum NoteSetMode: String, Codable {
-    case up, down, random, alternating
+    /// The first member on the first pass, the next on the second, and round again.
+    case up
+    /// The last member on the first pass, then each one before it, and round again.
+    case down
+    /// A member chosen by the dice on each pass. The same score always makes the same choices.
+    case random
+    /// Up to the last member and back down, without repeating either end: 1 2 3 2 1 2 3 …
+    case alternating
 
     @_documentation(visibility: internal)
     public func soundingIndex(count: Int, pass: Int, diceSalt: UInt64, seed: UInt64) -> Int {
@@ -144,10 +151,18 @@ public struct Fall: Equatable, Hashable, Codable {
 ///
 /// See <doc:Automation>.
 public enum AutomationTarget: Equatable, Hashable, Codable {
+    /// Gain, 0…1, multiplied into each note's velocity.
+    ///
+    /// It rides each voice, so a held note fades while it rings, and two volume curves multiply.
+    /// In a MIDI file it is controller 11, expression.
     case volume
+    /// The synth filter's cutoff, 20…20 000 Hz. In a MIDI file it is controller 74.
     case cutoff
+    /// The synth filter's resonance, 0…2.5. In a MIDI file it is controller 71.
     case resonance
+    /// The reverb send, 0…1. In a MIDI file it is controller 91.
     case reverb
+    /// A MIDI controller by number, 0…127. Values 0…1 are written across the controller's 0…127.
     case cc(Int)
     /// A parameter of something a program playing the session runs on the track, such as an
     /// effect plugin: named by the thing as that program's score writes it, and by the parameter's
@@ -210,9 +225,13 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
 ///
 /// See <doc:Automation>.
 public enum AutomationShape: String, Equatable, Hashable, Codable, CaseIterable {
+    /// A straight line from one breakpoint to the next.
     case linear
+    /// Moves quickly at first, then eases into the next breakpoint.
     case exponential
+    /// Eases out of one breakpoint and into the next, an S-curve.
     case smooth
+    /// Stays at one breakpoint's value until the next breakpoint, then jumps.
     case hold
 
     func fraction(_ x: Double) -> Double {
@@ -363,13 +382,46 @@ public enum NotationID {
 
 /// One sounding note: a pitch, a velocity, a start time and a duration in whole notes.
 ///
-/// Scores usually write notes as notation strings rather than building them. See <doc:NotesRestsAndNoteSets>.
+/// Scores usually write notes as notation strings rather than building them. Build one when you
+/// need an exact velocity, duration or start time.
+///
+/// ```swift
+/// Section {
+///     Note(pitch: .C5, velocity: 90, duration: 0.25)
+///     Note(pitch: nil, duration: 0.25)                // a quarter of silence
+///     Note(pitch: .E5, velocity: 70, startTime: 0, duration: 0.5)
+/// }
+/// ```
+///
+/// See <doc:NotesRestsAndNoteSets>.
+///
+/// ## Topics
+///
+/// ### Making a note
+///
+/// - ``init(pitch:)``
+/// - ``init(pitch:duration:)``
+/// - ``init(pitch:velocity:duration:)``
+/// - ``init(pitch:velocity:startTime:duration:)``
+///
+/// ### What a note is
+///
+/// - ``pitch``
+/// - ``velocity``
+/// - ``startTime``
+/// - ``duration``
 public struct Note: Equatable, Codable, Identifiable {
     @_documentation(visibility: internal)
     public var id: UUID = UUID()
+    /// Which note sounds, as a MIDI number; `nil` for a rest.
     public var pitch: Pitch?
+    /// How hard the note is struck, 0…127.
+    ///
+    /// On the way out it is multiplied by the track's and the session's volume.
     public var velocity: UInt32 = 100
+    /// Where the note begins, in whole notes from the start of its statement.
     public var startTime: MusicTimeStamp = 0
+    /// How long the note rings, in whole notes. It does not move what comes after it.
     public var duration: MusicTimeStamp = .whole
     @_documentation(visibility: internal)
     public var pitchVariants: [Pitch]? = nil
@@ -424,6 +476,17 @@ public struct Note: Equatable, Codable, Identifiable {
     @_documentation(visibility: internal)
     public var slideSourceLengths: [Int]? = nil
 
+    /// A note with every value given, including where it starts.
+    ///
+    /// Give several notes the same `startTime` to write a chord by hand.
+    ///
+    /// - Parameters:
+    ///   - pitch: Which note sounds, as a ``Pitch`` constant (`.C4`, `.ASharp5`) or a MIDI number.
+    ///     `nil` is silence: a rest that still takes up its time.
+    ///   - velocity: How hard the note is struck, 0…127; larger values clamp to 127.
+    ///   - startTime: Where the note begins, in whole notes from the start of its statement.
+    ///     Notes with the same start time sound together.
+    ///   - duration: How long the note rings, in whole notes: `1` is a whole note, `0.25` a quarter.
     public init(pitch: Pitch?, velocity: UInt32, startTime: MusicTimeStamp, duration: MusicTimeStamp) {
         self.pitch = pitch
         self.velocity = min(max(velocity, 0), 127)
@@ -431,6 +494,10 @@ public struct Note: Equatable, Codable, Identifiable {
         self.duration = duration
     }
 
+    /// A quarter note at velocity 100.
+    ///
+    /// - Parameter pitch: Which note sounds, as a ``Pitch`` constant (`.C4`, `.ASharp5`) or a
+    ///   MIDI number. `nil` is silence.
     public init(pitch: Pitch?) {
         self.pitch = pitch
         self.velocity = 100
@@ -438,6 +505,12 @@ public struct Note: Equatable, Codable, Identifiable {
         self.duration = .quarter
     }
 
+    /// A note at velocity 100.
+    ///
+    /// - Parameters:
+    ///   - pitch: Which note sounds, as a ``Pitch`` constant (`.C4`, `.ASharp5`) or a MIDI number.
+    ///     `nil` is silence: a rest that still takes up its time.
+    ///   - duration: How long the note rings, in whole notes: `1` is a whole note, `0.25` a quarter.
     public init(pitch: Pitch?, duration: MusicTimeStamp) {
         self.pitch = pitch
         self.velocity = 100
@@ -445,6 +518,13 @@ public struct Note: Equatable, Codable, Identifiable {
         self.duration = duration
     }
 
+    /// A note with a velocity and a duration.
+    ///
+    /// - Parameters:
+    ///   - pitch: Which note sounds, as a ``Pitch`` constant (`.C4`, `.ASharp5`) or a MIDI number.
+    ///     `nil` is silence: a rest that still takes up its time.
+    ///   - velocity: How hard the note is struck, 0…127; larger values clamp to 127.
+    ///   - duration: How long the note rings, in whole notes: `1` is a whole note, `0.25` a quarter.
     public init(pitch: Pitch?, velocity: UInt32, duration: MusicTimeStamp) {
         self.pitch = pitch
         self.velocity = min(max(velocity, 0), 127)
@@ -482,10 +562,16 @@ public extension Note {
 /// See <doc:NotesRestsAndNoteSets>.
 public typealias Rest = Note
 extension Rest {
+    /// A whole note of silence.
     public init() {
         self.startTime = 0
         self.duration = 1
     }
+    /// Silence at a given place, for a given time.
+    ///
+    /// - Parameters:
+    ///   - startTime: Where the silence begins, in whole notes from the start of its statement.
+    ///   - duration: How long it lasts, in whole notes.
     public init(startTime: MusicTimeStamp, duration: MusicTimeStamp) {
         self.startTime = startTime
         self.duration = duration
@@ -494,7 +580,19 @@ extension Rest {
 
 /// Pitches that take turns: a different member sounds on each pass.
 ///
-/// See <doc:NotesRestsAndNoteSets>.
+/// A note set is one note slot. On the first pass of a loop it plays one member, on the next
+/// pass another, in the order its ``NoteSetMode`` gives.
+///
+/// ```swift
+/// Loop(bars: 1, times: 4) { _ in
+///     Section {
+///         NoteSet(.C4, .DSharp4, .G4)            // C4, D#4, G4, C4
+///         NoteSet(.random, .C5, .D5, .E5)        // the dice choose, the same way every time
+///     }
+/// }
+/// ```
+///
+/// In notation the same thing is written `"(C4 D#4 G4)"`. See <doc:NotesRestsAndNoteSets>.
 public struct NoteSet {
     @_documentation(visibility: internal)
     public let pitches: [Pitch]
@@ -503,12 +601,23 @@ public struct NoteSet {
     @_documentation(visibility: internal)
     public let duration: MusicTimeStamp
 
+    /// A note set that walks its members upward.
+    ///
+    /// - Parameters:
+    ///   - pitches: The pitches the slot may sound, in order.
+    ///   - duration: How long whichever pitch sounds rings, in whole notes.
     public init(_ pitches: Pitch..., duration: MusicTimeStamp = .quarter) {
         self.mode = .up
         self.pitches = Array(pitches)
         self.duration = duration
     }
 
+    /// A note set that walks its members in the order you choose.
+    ///
+    /// - Parameters:
+    ///   - mode: How the members take turns across passes.
+    ///   - pitches: The pitches the slot may sound, in order.
+    ///   - duration: How long whichever pitch sounds rings, in whole notes.
     public init(_ mode: NoteSetMode, _ pitches: Pitch..., duration: MusicTimeStamp = .quarter) {
         self.mode = mode
         self.pitches = Array(pitches)

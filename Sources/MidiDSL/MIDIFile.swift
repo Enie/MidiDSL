@@ -15,8 +15,21 @@ import Foundation
 /// `.resonance` CC 71, `.reverb` CC 91, `.cc(n)` CC n.
 ///
 /// ```swift
+/// let session = Session.build {
+///     Session { Track("melody") { Section { "| 1 2 3 5 | 6 5 3 - |" } } }
+///         .tempo(96)
+/// }
 /// try MIDIFile.write(session, to: URL(fileURLWithPath: "piece.mid"))
 /// ```
+///
+/// Build the session with ``Session/build(_:)`` so its bars are read in its own meter.
+///
+/// ## Topics
+///
+/// ### Writing a file
+///
+/// - ``write(_:loops:to:)``
+/// - ``data(for:loops:)``
 public enum MIDIFile {
 
     @_documentation(visibility: internal)
@@ -26,18 +39,29 @@ public enum MIDIFile {
     /// Only the steps where the value changes are written.
     private static let controllerStepTicks = 20
 
-    /// Writes the file. `loops` is how many passes to write; nil writes the session's form
-    /// (`Session.effectiveLoopCount`).
+    /// Writes the session to a MIDI file.
+    ///
+    /// - Parameters:
+    ///   - session: The piece.
+    ///   - loops: How many passes to write. `nil` writes the session's form once: as many
+    ///     passes as ``Session/loops(_:)`` says, or as its arrangement needs.
+    ///   - url: Where to write the file.
+    /// - Throws: The error writing to `url` threw.
     public static func write(_ session: Session, loops: Int? = nil, to url: URL) throws {
         try data(for: session, loops: loops).write(to: url)
     }
 
-    /// The file's bytes. `loops` is how many passes to write; nil writes the session's form
-    /// (`Session.effectiveLoopCount`).
+    /// The session as the bytes of a MIDI file.
+    ///
+    /// - Parameters:
+    ///   - session: The piece.
+    ///   - loopCount: How many passes to write. `nil` writes the session's form once: as many
+    ///     passes as ``Session/loops(_:)`` says, or as its arrangement needs.
+    /// - Returns: The file's contents.
     public static func data(for session: Session, loops loopCount: Int? = nil) -> Data {
         let loopTicks = loopLengthTicks(for: session)
         let loops = loopTicks > 0 ? max(1, loopCount ?? session.effectiveLoopCount) : 1
-        let tempo = session.tempo ?? 120.0
+        let tempo = session.tempo ?? Session.defaultTempo
 
         var data = Data()
         data.appendFourCC("MThd")
@@ -107,7 +131,7 @@ public enum MIDIFile {
 
     private static func conductorChunk(for session: Session, endTick: Int) -> Data {
         let signature = session.timeSignature ?? .fourFour
-        let tempo = session.tempo ?? 120.0
+        let tempo = session.tempo ?? Session.defaultTempo
 
         var events = Data()
         events.appendVLQ(0)

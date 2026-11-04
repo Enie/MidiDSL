@@ -40,8 +40,21 @@ public enum ScoreAdvisories {
 
 /// Sections repeated on a grid of their own inside a track.
 ///
-/// The body is handed the round number, so it can vary from one round to the next.
-/// See <doc:TracksAndArrangement>.
+/// A loop plays its body again and again, each time round on a grid of `bars` bars, so a
+/// groove can repeat under a part that does not. The body is handed the round number, counting
+/// from 0, so it can change from one round to the next.
+///
+/// ```swift
+/// Track("drums", instrument: .drums()) {
+///     Loop(bars: 2) { round in                     // as long as the piece
+///         Section { Kick("x..x"); Snare("..x.") }
+///         if round % 4 == 3 { Section { Crash("x...") } }
+///     }
+/// }
+/// ```
+///
+/// A round is one time round this loop. A pass is one time through the whole piece; see
+/// ``Session/init(line:column:file:_:)``. See <doc:TracksAndArrangement>.
 public struct Loop {
     @_documentation(visibility: internal)
     public let bars: Int
@@ -53,6 +66,19 @@ public struct Loop {
     private let file: String
     private let body: (Int) -> [Section]
 
+    /// A loop of sections on a grid of its own.
+    ///
+    /// A round always takes exactly `bars` bars: a body that builds nothing is silent for them,
+    /// and a body that runs longer is cut off.
+    ///
+    /// - Parameters:
+    ///   - bars: How long one round is, in the session's bars. At least 1.
+    ///   - times: How many rounds. Left out, the loop runs as long as the longest part written
+    ///     out in full, so adding a phrase to the melody lengthens the groove under it.
+    ///   - line: Filled in for you, to place warnings in the source.
+    ///   - column: Filled in for you, to place warnings in the source.
+    ///   - file: Filled in for you, to place warnings in the source.
+    ///   - body: The sections of one round, handed the round number, counting from 0.
     public init(bars: Int, times: Int? = nil,
                 line: Int = #line, column: Int = #column, file: String = #fileID,
                 @SectionArrayBuilder body: @escaping (Int) -> [Section]) {
