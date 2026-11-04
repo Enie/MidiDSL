@@ -79,10 +79,6 @@ A raw controller, for whatever receives the file to learn: the value 0…1 is wr
 Section { … }.automate(.cc(74), bars: [0: 0.2, 4: 1.0])
 ```
 
-### A host's own parameters
-
-A host can automate something it runs on the track, such as a plugin's knob, with `.host(name, parameter:)`, 0…1 across the parameter's range. A host's own module may give it a spelling of its own. A MIDI file has no word for it and leaves it out.
-
 ## Shapes
 
 ### curve:

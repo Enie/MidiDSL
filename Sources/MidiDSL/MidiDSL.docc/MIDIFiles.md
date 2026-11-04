@@ -34,7 +34,7 @@ By default the file holds the session's whole form: `.loops(n)` if the session s
 - Muted tracks and sections are left out, and track and session volumes scale the velocities.
 - Slides become pitch-bend curves, with the bend range set per track to fit the widest slide, up to 24 semitones. Bend is per channel, so a sliding note that overlaps notes with a different curve falls back to re-attacked segments.
 - A `.volume` automation curve becomes expression, CC 11 (see <doc:Automation>).
-- A track-wide curve becomes its controller on the track's channel: `.cutoff` CC 74 (mapped in octaves across 20 Hz…20 kHz), `.resonance` CC 71, `.reverb` CC 91, `.cc(n)` CC n. A host's own parameter (`.host(...)`) has no MIDI word and is left out.
+- A track-wide curve becomes its controller on the track's channel: `.cutoff` CC 74 (mapped in octaves across 20 Hz…20 kHz), `.resonance` CC 71, `.reverb` CC 91, `.cc(n)` CC n.
 
 Pass `loops:` to write a different number of passes.
 

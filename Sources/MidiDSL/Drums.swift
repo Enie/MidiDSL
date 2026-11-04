@@ -80,7 +80,7 @@ public struct DrumPiece: Equatable {
 ///
 /// Note what interpolating costs, which is not this extension's doing: the notes
 /// keep the offsets of the interpolated text, not of the literal as written, so a
-/// host that maps notes back to the source cannot place the tokens after a hole.
+/// tool that maps notes back to the source cannot place the tokens after a hole.
 /// Inside a `Grid`/`Phrase` closure or a `Markov` training string — text that is
 /// generated anyway — it costs nothing. In a hand-written literal,
 /// `Lane(.kick, "x... x...")` names the same piece and keeps its steps placed.

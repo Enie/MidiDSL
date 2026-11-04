@@ -8,7 +8,7 @@ Grid writes a drum lane one character at a time. Phrase and Markov do the same f
 
 That is the whole design. What comes back is the same thing you would have typed between the quotes, so nothing downstream knows it was generated — .key(…) still moves it, the parser still warns about it, a MIDI file still holds it, and it sounds identical whether you generated it or wrote it out. You can print one, read it, and paste it back into the score as a literal.
 
-Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds when a host recompiles the score as you type. A melody that rerolled itself would change under your hands and export a take you never heard.
+Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds when you compile the score again after every change. A melody that rerolled itself would change under your hands and export a take you never heard.
 
 ## Phrase: the numbers
 
@@ -583,4 +583,4 @@ A written melody shows you the tune; a generated one shows you the rules that ma
 
 ### Never use Double.random(in:)
 
-Not in a score, and not to feed one of these. A host that recompiles as you type would run it again on every keystroke, so a melody drawn from the system generator would change under your hands, and the file you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.
+Not in a score, and not to feed one of these. A melody drawn from the system generator would be a different one on every run, and the file you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.

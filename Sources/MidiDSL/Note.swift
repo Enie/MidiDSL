@@ -140,8 +140,7 @@ public struct Fall: Equatable, Hashable, Codable {
     }
 }
 
-/// What an automation curve moves: volume, filter cutoff and resonance, reverb, a MIDI controller,
-/// or a parameter of something the host runs on the track.
+/// What an automation curve moves: volume, filter cutoff and resonance, reverb, or a MIDI controller.
 ///
 /// See <doc:Automation>.
 public enum AutomationTarget: Equatable, Hashable, Codable {
@@ -150,9 +149,11 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     case resonance
     case reverb
     case cc(Int)
-    /// A parameter of something the host runs on the track, such as an effect plugin: named by
-    /// the thing as the host's score writes it, and by the parameter's display name. The value is
-    /// 0…1 across the parameter's own range. A MIDI file has no word for it and leaves it out.
+    /// A parameter of something a program playing the session runs on the track, such as an
+    /// effect plugin: named by the thing as that program's score writes it, and by the parameter's
+    /// display name. The value is 0…1 across the parameter's own range. A MIDI file has no word
+    /// for it and leaves it out.
+    @_documentation(visibility: internal)
     case host(String, parameter: String)
 
     @_documentation(visibility: internal)
@@ -176,7 +177,7 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     /// The controller a MIDI file or a MIDI port carries a track-wide curve on: 74 for the
     /// cutoff (brightness), 71 for the resonance (timbre), 91 for the reverb send, the number
     /// itself for `.cc`. Nil for volume, which rides each voice as expression (CC 11), and for a
-    /// host parameter.
+    /// `.host` parameter.
     @_documentation(visibility: internal)
     public var midiController: UInt8? {
         switch self {

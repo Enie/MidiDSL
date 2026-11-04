@@ -73,7 +73,7 @@ struct Combo: Score {
 | `--midi <path>` | Writes a Standard MIDI File of the whole form. Given without `--session-json`, nothing else is printed. |
 | `--time-signature <n>/<d>` | The meter that bar notation is read in before the session states its own. |
 
-The JSON holds every note with its pitch, start, duration and velocity, plus the line and column it was written at. That is the whole interface between a score and a host: a host can compile the file as written, run it, and read the `Session` back, with nothing added to the score.
+The JSON holds every note with its pitch, start, duration and velocity, plus the line and column it was written at. Any program can use a score this way: compile the file as written, run it, and read the `Session` back, with nothing added to the score.
 
 ## Topics
 

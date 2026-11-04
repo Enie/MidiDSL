@@ -16,8 +16,8 @@ import Foundation
 /// 33 the fingered electric bass, 48 the string ensemble. A General MIDI chart that counts
 /// from 1 is one higher.
 ///
-/// A host that makes its own sounds, a synthesizer or a plugin, attaches them to the same
-/// instrument, and a MIDI file simply leaves them out.
+/// A program that makes its own sounds can attach them to the same instrument; a MIDI file
+/// leaves them out.
 ///
 /// See <doc:Instruments>.
 public struct Instrument: Codable, Equatable {

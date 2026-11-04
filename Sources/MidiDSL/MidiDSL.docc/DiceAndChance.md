@@ -22,7 +22,7 @@ Dice you roll while writing the piece, so a part can be generated instead of typ
 
 On top of the call itself: .chance(…) for a yes-or-no, .pick([…], …) to choose between options, .int(in: 60...72, …) for a whole number, .value([…]) when the coordinates are already an array. All four are the one roll below, shaped.
 
-Never use Double.random(in:) in a score: a score is meant to be a pure function of its source. A host that recompiles it as you type would hear it change on every keystroke, so a random groove would change under your hands, and the file you export would be one you never heard.
+Never use Double.random(in:) in a score: a score is meant to be a pure function of its source. Every run would write a different piece, so a groove would change each time you compiled it, and the file you export would be one you never heard.
 
 ```swift
 let d = Dice(seed: 7)

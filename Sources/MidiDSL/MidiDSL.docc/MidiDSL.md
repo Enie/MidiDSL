@@ -4,7 +4,7 @@ Music written as Swift.
 
 ## Overview
 
-A score is a value built with result builders: a ``Session`` holds tracks, a ``Track`` holds sections, and a ``Section`` holds notation. A score is also a program. Run it, and it hands over the piece it describes, either as JSON for a host to play or as a Standard MIDI File.
+A score is a value built with result builders: a ``Session`` holds tracks, a ``Track`` holds sections, and a ``Section`` holds notation. A score is also a program. Run it, and it hands over the piece it describes, as a Standard MIDI File or as JSON for another program to read.
 
 ```swift
 import MidiDSL
@@ -42,7 +42,7 @@ Time is measured in whole notes: a duration of `1.0` is one whole note, four bea
 
 ### Describing, not playing
 
-MidiDSL describes music and makes no sound. Its output is a `Session`: plain data that is `Codable` and `Equatable`, for a host to play, export or draw, plus ``MIDIFile`` when a file is all you need. A track's ``Instrument`` says what a MIDI file can: a General MIDI program, and whether the track is drums. Sound beyond that, a synthesizer, a plugin, an effect chain, belongs to the host that makes it, which can add its own for scores that import its module.
+MidiDSL describes music and makes no sound. Its output is a Standard MIDI File (``MIDIFile``), and the `Session` behind it: plain data that is `Codable` and `Equatable`, for any program that wants the notes. A track's ``Instrument`` says what a MIDI file can: a General MIDI program, and whether the track is drums. Whatever opens the file chooses the actual sound.
 
 ### Pure functions of their source
 

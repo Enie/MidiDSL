@@ -81,10 +81,14 @@ expression (CC 11). By default it writes the session's whole form
 ## What it is and is not
 
 MidiDSL **describes** music. It does not make sound: there is no synthesizer
-and no live MIDI output in this package. What you get is a `Session`
-(`Codable`, `Equatable`, plain data) for a host to play, export or draw, and a
-MIDI file of it if that is all you need. The JSON above is the whole interface
-between a score and a host.
+and no live MIDI output in this package. What you get is a Standard MIDI File
+for any DAW or notation program, and the `Session` itself (`Codable`,
+`Equatable`, plain data) — as a Swift value, or as the JSON above — if you want
+to do something else with the notes.
+
+MidiDSL was extracted from [Componium](https://eniestudio.de/componium), a
+macOS app for writing music as Swift, and is used there. It stands on its own:
+nothing in it needs or knows about the app.
 
 It depends on Foundation and nothing else.
 
@@ -110,8 +114,8 @@ ghost, `.` a rest, `?` a coin tossed again on every pass.
 Nothing here is random in the sense of `Double.random`. Everything left to
 chance goes through `Dice`, which rolls from *where the choice is written* and
 *which pass is playing*, so the same source gives the same piece on every run
-and on every machine — and a host that recompiles on each keystroke does not
-reroll the groove under your hands. `Session.seed(_:)` picks the take.
+and on every machine — recompiling a score while you write it never rerolls
+the groove under your hands. `Session.seed(_:)` picks the take.
 
 ## Using it
 

@@ -228,7 +228,7 @@ return Session { pass in
 pass < 2 ? "…" : "…"   ·   if pass < 2 { "…" } else { "…" }
 ```
 
-Both spellings play the same. Each note records which string literal it was read from, so a host that maps notes back to the source, to light the token that is sounding, can tell the branches of a ternary apart by their text, and the branches of an if by their position. Two branches written identically can't be told apart that way; write those as if / else.
+Both spellings play the same. Each note records which string literal it was read from, so an editor that maps notes back to the source, to highlight the token that is sounding, can tell the branches of a ternary apart by their text, and the branches of an if by their position. Two branches written identically can't be told apart that way; write those as if / else.
 
 ```swift
 Section { pass < 2 ? "| 1 1 5 5 |" : "| 1 b3 4 5 |" }
