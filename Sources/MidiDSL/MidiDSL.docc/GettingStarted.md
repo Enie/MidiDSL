@@ -10,7 +10,7 @@ In `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Enie/MidiDSL.git", from: "0.2.0"),
+    .package(url: "https://github.com/Enie/MidiDSL.git", .upToNextMinor(from: "0.3.0")),
 ],
 targets: [
     .executableTarget(name: "MyScore", dependencies: [
@@ -19,7 +19,7 @@ targets: [
 ]
 ```
 
-In Xcode, choose File ▸ Add Package Dependencies… and enter the same URL. The package needs Swift 6 tools and macOS 13 or later, and builds in the Swift 5 language mode. Until 1.0, a minor version may change the API.
+In Xcode, choose File ▸ Add Package Dependencies… and enter the same URL. The package needs Swift 6 tools and macOS 13 or later, and builds in the Swift 5 language mode. Until 1.0, a minor version may change the API, which is why the requirement above stops at the next one.
 
 ### Write a score
 
@@ -33,7 +33,7 @@ struct Sketch: Score {
     var session = Session {
         Track("melody") {
             Section {
-                "C E G C6"
+                "| C E G C6 |"
             }
         }
     }
@@ -41,7 +41,7 @@ struct Sketch: Score {
 }
 ```
 
-A string literal inside a `Section` is parsed as notation (see <doc:StringNotation>).
+A string literal inside a `Section` is parsed as notation (see <doc:StringNotation>): here one bar of four quarter notes.
 
 ### Hear it
 
@@ -49,7 +49,7 @@ A string literal inside a `Section` is parsed as notation (see <doc:StringNotati
 swift run MyScore --midi sketch.mid
 ```
 
-This writes a Standard MIDI File that any DAW or notation program opens (see <doc:MIDIFiles>). Open the same file in [Componium](https://eniestudio.de/componium) to hear it played, recompiled as you type.
+This writes a Standard MIDI File that any DAW or notation program opens (see <doc:MIDIFiles>). To hear the score itself while you write it, open the `.swift` file in [Componium](https://eniestudio.de/componium), which plays it and recompiles as you type.
 
 ### A typical structure
 
@@ -58,9 +58,11 @@ Give each track its own ``Instrument``, the General MIDI sound a MIDI file opens
 ```swift
 Session {
     Track("drums", instrument: .drums()) {
-        Section {
-            Kick("x... x... x... x...")
-            Hat("x.x. x.x. x.x. x.x.")
+        Loop(bars: 1) { _ in            // one bar, repeated for the whole piece
+            Section {
+                Kick("x... x... x... x...")
+                Hat("x.x. x.x. x.x. x.x.")
+            }
         }
     }
     Track("keys", instrument: .generalMIDI(89)) {

@@ -15,10 +15,10 @@ Progression(_ progression: String, for pitch: Pitch, minor: Bool = false)
 ```
 
 - term `progression`: Roman numerals separated by " - ". Case decides major or minor outside the key's table; a suffix overrides both ("V7", "iim7"). Plain chord notations can be mixed in.
-- term `for`: The key's tonic as a pitch — the root the numerals are counted from, and the register the chords land in.
+- term `for`: The key's tonic as a pitch — the root the numerals are counted from. Only its note name counts: the chords sit in the default register, roots in octave 5, whatever octave you give.
 - term `minor`: false reads the numerals against the major table, true against the natural-minor one (i, ii°, III, iv, v, VI, VII).
 
-Roman numerals separated by " - ". Diatonic numerals use the key's table (vii = diminished in major); outside the table the case you wrote wins: uppercase = major, lowercase = minor — so "II" in C is D major. A trailing quality suffix overrides both ("V7", "iim7", "Imaj7"). Plain chord notations can be mixed in.
+Roman numerals separated by " - ". Diatonic numerals use the key's table (vii = diminished in major); outside the table the case you wrote wins: uppercase = major, lowercase = minor — so "II" in C is D major. A trailing quality suffix overrides both ("V7", "iim7", "Imaj7"). Plain chord notations can be mixed in. A step that is neither a numeral nor a chord is left out.
 
 ```swift
 Progression("I - vi - IV - V", for: .C4)
@@ -32,9 +32,9 @@ Progression(_ progression: String, for: Pitch, minor: true)
 
 - term `progression`: Roman numerals separated by " - ", read against the minor table.
 - term `for`: The key's tonic as a pitch.
-- term `minor`: true here. "V" is not diatonic in natural minor, so its uppercase resolves it major — the harmonic-minor dominant.
+- term `minor`: true here. Uppercase "V" is not in the natural-minor table, so its uppercase resolves it major — the harmonic-minor dominant.
 
-minor: true uses the natural-minor table (i, ii°, III, iv, v, VI, VII). "V" is not diatonic there, so uppercase resolves it major — the harmonic-minor dominant.
+minor: true uses the natural-minor table (i, ii°, III, iv, v, VI, VII). Uppercase "V" is not in that table, so uppercase resolves it major — the harmonic-minor dominant.
 
 ```swift
 Progression("i - iv - V", for: .A4, minor: true)
@@ -58,7 +58,7 @@ From an explicit [Chord] array.
 durations(_ durations: Double...) -> Progression
 ```
 
-- term `durations`: One length per chord, in whole notes, in order. The chords are re-laid to follow one another, so this changes how long the progression lasts.
+- term `durations`: One length per chord, in whole notes, in order. Chords without explicit start times follow one another, so this changes how long the progression lasts. Call it before .syncopate(), which fixes the start times from the lengths it finds.
 
 One duration per chord.
 
@@ -78,7 +78,7 @@ One velocity per chord.
 qualities(_ qualities: ChordQuality...) -> Progression
 ```
 
-- term `qualities`: One quality per chord, in order, replacing what the numeral resolved to — a plain V turned into .dom7, say. Chords past the end of the list keep theirs.
+- term `qualities`: One quality per chord, in order, replacing what the numeral resolved to — a plain V turned into .dominant7, say. Chords past the end of the list keep theirs.
 
 Overrides the quality per step — turn a plain V into a dominant 7, etc.
 
@@ -93,7 +93,7 @@ Progression("ii - V - I", for: .C4)
 startTimes(_ startTimes: Double...) -> Progression
 ```
 
-- term `startTimes`: Where each chord begins, in whole notes from the progression's start, in order. This replaces the back-to-back layout, so chords can overlap or leave gaps.
+- term `startTimes`: Where each chord begins, in whole notes from the progression's start, in order. This replaces the back-to-back layout, so chords can overlap or leave gaps; a chord past the end of the list starts at 0.
 
 Explicit start time per chord — overrides the default back-to-back layout.
 

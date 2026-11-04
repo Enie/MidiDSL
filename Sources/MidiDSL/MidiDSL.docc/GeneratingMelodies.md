@@ -6,9 +6,9 @@ Markov chains over notation tokens.
 
 Grid writes a drum lane one character at a time. Phrase and Markov do the same for notes, one level up: they write a *notation string*, one token per slot.
 
-That is the whole design. What comes back is the same thing you would have typed between the quotes, so nothing downstream knows it was generated — .key(…) still moves it, the parser still warns about it, the exporters still write it, and it sounds identical whether you generated it or wrote it out. You can print one, read it, and paste it back into the score as a literal.
+That is the whole design. What comes back is the same thing you would have typed between the quotes, so nothing downstream knows it was generated — .key(…) still moves it, the parser still warns about it, a MIDI file still holds it, and it sounds identical whether you generated it or wrote it out. You can print one, read it, and paste it back into the score as a literal.
 
-Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds, because Componium recompiles about 0.8 s after every keystroke. A melody that rerolled itself would change under your hands and export a take you never heard.
+Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds when a host like Componium recompiles about 0.8 s after every keystroke. A melody that rerolled itself would change under your hands and export a take you never heard.
 
 ## Phrase: the numbers
 
@@ -320,14 +320,12 @@ func voiced(_ notation: String) -> String {
 }
 
 Section { voiced(harmony.melody(bars: 4, seed: 3)) }
-// | ~0.054Cm7 ~0.066Fm7 - - | ~0.166Bbdom7 - - r | …
+// | ~0.054Cm7 ~0.066Fm7 - - | ~0.166Bbdom7 - - ~0.150Bbdom7 | …
 ```
 
 ### The end of the source opens a new phrase
 
 The source is read straight through, and its last token is followed by each way the source opens a bar — once each, since it ended once and what it knows is how to open, not how often. Something has to follow it: a final token with nowhere to go is a dead end, which is how a chain learned from a phrase ending in two ties came out as eight bars of tie.
-
-It used to be read as a circle, where the last token was followed by the first one and nothing else. That put an edge in the chain the source never played, and wherever the last token appeared nowhere else it was the only way out — so every walk that reached the ending left it the same way, every time. A source whose bars all open alike reads exactly as it did before.
 
 One consequence worth knowing: the seam is a transition like any other, so a melody may pass through it. If the ending should not lead back into an opening, don't end the source there.
 
@@ -359,13 +357,15 @@ order 1 asks "what followed this note?" — the most freedom, and the least memo
 Start at 2. Go to 1 when it sounds too much like the source, to 3 when it sounds like nothing in particular.
 
 ```swift
-// Measured on a six-bar source, writing sixteen slots:
+let theme = "1 2 3 5 | 6 5 3 2 | 3 5 6 5 | 3 2 1 2 | 3 3 2 1 | 2 1 - -"
+
+// Measured on that six-bar theme, sixteen slots per melody, seeds 0–99:
 //
 //          longest run quoted    different melodies
 //          from the source       over 100 seeds
-// order 1  about 4 slots         100
-// order 2  about 8 slots          95
-// order 3  about 12 slots         49
+// order 1  about 6 slots         100
+// order 2  about 9 slots          89
+// order 3  about 10 slots         78
 ```
 
 ### Longer memories back off
@@ -461,7 +461,7 @@ So bars: 4, slots: 4 and bars: 2, slots: 8 write the identical sixteen tokens: t
 
 The take. Any Int; there is nothing special about small ones and nothing sequential about neighbours — seed 7 and seed 8 are two unrelated draws, not two nearby ones.
 
-It decides the opening and every choice along the way, and nothing else: the same chain and the same numbers always write the same melody for the same seed, and never for two different ones (at order 1, 100 seeds gave 100 different melodies; at order 3, 35, because there is less left to choose).
+It decides the opening and every choice along the way, and nothing else: the same chain and the same numbers always write the same melody for the same seed. Two seeds can still land on the same melody when the chain has few choices to make — the higher the order, the more often (see the table under order:).
 
 Change the number to hear another take.
 
@@ -479,23 +479,24 @@ It is a probability *offered*, not a proportion delivered: a slot can only open 
 Around 0.25 is a tune that stays recognisable and never repeats exactly; above 0.5 the shape starts to dissolve.
 
 ```swift
-// Share of slots that actually became sets, six-bar source:
+// Share of slots that actually became sets, on the theme above:
 //
 // open   order 1   order 2   order 3
 // 0.00     0%        0%        0%
-// 0.25    19%       17%       15%
-// 0.50    40%       35%       33%
-// 1.00    82%       74%       66%
+// 0.25    14%       12%       11%
+// 0.50    24%       21%       19%
+// 1.00    35%       34%       31%
 
+let m = Markov(from: theme, order: 2)
 m.melody(bars: 4, seed: 7, open: 0.25)
-// → "| 5 3 ?(3 2 5) 2 | 5 6 5 ?(3 5 6) | ?(3 2 5) 2 1 - | 1 5 3 2 |"
+// → "| 6 5 ?(3 6) 2 | 1 2 1 - | - 3 5 6 | 5 3 2 1 |"
 ```
 
 ## open: how the sets behave
 
 ### Written once, decided every pass
 
-The set is fixed when the score compiles; which member sounds is decided on each pass through the loop. That split is the whole point, and it is the same one a "?" step gives a drum lane: the candidates are placed once so the player and both exporters can all agree, and the choice among them is re-rolled per pass so no two passes are identical.
+The set is fixed when the score compiles; which member sounds is decided on each pass through the loop. That split is the whole point, and it is the same one a "?" step gives a drum lane: the candidates are placed once so every reader of the session agrees on them, and the choice among them is re-rolled per pass so no two passes are identical.
 
 Each set rolls its own die, from where it is written, so two sets in the same bar do not move together. .seed(…) on the Session twists all of those rolls at once — one written melody, as many performances as you have seeds, each identical every time it runs.
 
@@ -524,7 +525,7 @@ The first `order` tokens never open either: they are the quoted opening, and the
 ```swift
 let chart = Markov(from: "1maj - 6m - | 4maj - 5dom7 -", order: 2)
 chart.melody(bars: 4, seed: 3, open: 0.5)
-// | 4maj - 5dom7 - | ?(1maj 6m 5dom7) - ?(3m 6m 5dom7) - | …
+// | 1maj - 6m - | ?(4maj 6m 5dom7) - ?(5dom7 4maj 6m) - | …
 ```
 
 ## Fitting it into the song
@@ -570,8 +571,8 @@ let bass   = m.melody(bars: 4, slots: 2, seed: 5)
 The result is an ordinary String. print(m.melody(…)) shows it, and pasting it back into the score as a literal freezes that take. Generate while you are searching; paste when you have found it.
 
 ```swift
-print(m.melody(bars: 4, seed: 7))
-// | 5 3 3 2 | 5 6 5 3 | 3 2 1 - | 1 5 3 2 |
+print(m.melody(bars: 4, seed: 7))   // m = Markov(from: theme, order: 2)
+// | 6 5 3 2 | 1 2 1 - | - 3 5 6 | 5 3 2 1 |
 ```
 
 ## Worth knowing
@@ -582,4 +583,4 @@ A written melody shows you the tune; a generated one shows you the rules that ma
 
 ### Never use Double.random(in:)
 
-Not in a score, and not to feed one of these. Componium recompiles about 0.8 s after every keystroke, so a melody drawn from the system generator would change under your hands, and the WAV you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.
+Not in a score, and not to feed one of these. A host like Componium recompiles about 0.8 s after every keystroke, so a melody drawn from the system generator would change under your hands, and the file you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.

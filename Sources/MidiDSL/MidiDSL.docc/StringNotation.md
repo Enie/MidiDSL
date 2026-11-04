@@ -4,9 +4,9 @@ Melodies, chords and rhythms written as strings.
 
 ## Overview
 
-Any string literal inside a Section is parsed as music. Edits inside a notation string are live-patched — you hear them on the keystroke, before the compiler even runs.
+Any string literal inside a Section is parsed as music.
 
-Two modes: inline notation (tokens separated by spaces, each lasting one whole note by default) and bar notation (the string contains "|"; each bar's tokens split the bar evenly, bar length follows the time signature).
+Two modes: inline notation (tokens separated by spaces, each lasting one whole note by default, with a space between two notes counting as a rest beat — see Rests) and bar notation (the string contains "|"; each bar's tokens split the bar evenly, bar length follows the time signature, and a space only separates). Most music reads best in bar notation; the examples below use it wherever a rhythm matters.
 
 ## Notes & rests
 
@@ -51,7 +51,7 @@ Everything inside a { } group shares the one slot the group sits in — the seri
 R  _  (space)
 ```
 
-R or _ is a one-beat rest. In inline notation a space between tokens also inserts one rest slot (consecutive spaces collapse into one). These implicit rests are beats like any other — per-beat modifiers such as .durations() and .velocities() count them.
+R or _ is a one-beat rest. In inline notation a space between two sounding tokens also inserts one rest slot (consecutive spaces collapse into one), so "C E G" is C, rest, E, rest, G. No rest goes in next to an explicit R or _, or before a token that continues what came before it — one starting with -, +, > or ^. These implicit rests are beats like any other — per-beat modifiers such as .durations() and .velocities() count them. Write "CEG" or "| C E G |" for three notes in a row.
 
 ```swift
 "C R E _ G"        // note, rest, note, rest, note
@@ -110,7 +110,7 @@ If the first element isn't a chord name, the bracketed notes simply sound togeth
 One note per pass, cycling through the listed pitches on each loop iteration. Prefix chooses the order: ~ up (default), ~~ down, ~* alternating, ? random.
 
 ```swift
-"C2 (C3 Eb3 G3) C2 ?(C3 Eb3 G3 Bb3)"
+"| C2 (C3 Eb3 G3) C2 ?(C3 Eb3 G3 Bb3) |"
 ```
 
 ## Arpeggios
@@ -148,7 +148,7 @@ A number after the mark spreads the arpeggio over exactly that duration (in whol
 Arpeggio marks on a custom note stack play it in its *written* order — the listed order is the picking order (a named chord arpeggiates pitch-sorted instead). ~~ reverses the listed order, ~* plays first, last, then the middles, ? shuffles. Each note rings through the slot, so a fingerpicked voicing sounds let-ring — spell the same pitches as a compact run ("D3A3E4F#4") for sequential, non-ringing sixteenths.
 
 ```swift
-"~=[D3 A3 E4 F#4] C#5 - ~=[C#5 E5 C#5 A4]"
+"| ~=[D3 A3 E4 F#4] C#5 - ~=[C#5 E5 C#5 A4] |"
 ```
 
 ## Joining notation
@@ -263,7 +263,7 @@ A token starting with > continues the previous notes into new pitches — one vo
 >E   >=E   >0.25E   (a bare number is a degree: >5)
 ```
 
-Default is a quick ~80 ms glide. = spreads the glide over the whole available span (a continuous glissando); a number glides over exactly that duration in whole notes. One rule keeps that apart from degree notation: if the whole payload after > names a degree it is the target, not a timing — ">5" slides to the fifth, ">0.25E" glides into E over a quarter note. A written length can't precede a plain degree, though: ">0.255" reads as one number and leaves no target (it warns). Use the default, use ">=5" to fill the slot, or write the length before a target that doesn't start with a digit — a name (">0.25C6") or an altered degree (">0.25#5"). Audio and MIDI export both render slides exactly — MIDI writes them as pitch-bend curves (with an RPN bend-range setup per track).
+Default is a quick ~80 ms glide. = spreads the glide over the whole available span (a continuous glissando); a number glides over exactly that duration in whole notes. One rule keeps that apart from degree notation: if the whole payload after > names a degree it is the target, not a timing — ">5" slides to the fifth, ">0.25E" glides into E over a quarter note. A written length can't precede a plain degree, though: ">0.255" reads as one number and leaves no target (it warns). Use the default, use ">=5" to fill the slot, or write the length before a target that doesn't start with a digit — a name (">0.25C6") or an altered degree (">0.25#5"). A MIDI file writes slides as pitch-bend curves, with the bend range set per track (RPN 0) to fit the widest slide.
 
 ```swift
 "C >=C6"           // octave glissando filling the second slot
@@ -301,11 +301,11 @@ A bare > target with nothing held scoops from the last pitch the string sounded 
 "C ^E"   "C^E"   "E^C"   "C^0.7E"   "Am^Gmaj"   "C^D^E"
 ```
 
-^ is the legato connector: like >, but the pitch changes instantly — a hammer-on (upward) or pull-off (downward) — with no re-attack, the ring carrying on slightly softer. A token starting with ^ hammers the held notes onto new pitches at the slot boundary ("C ^E", "Cm - ^Fm", works across barlines); inside a token it fuses stages into one slot ("C^E" is a grace hammer at the attack, "CD^EF" works in compact runs, "Am^Gmaj" pairs chord voices low to high). Each step keeps 90% of the ringing level by default; a decimal right after ^ sets the carry — "^0.7E" keeps 70%, "^1E" keeps all of it. Carries compound along a chain ("C^D^E"). Synth tracks render the softer carry exactly; sampled tracks and MIDI export play the instant pitch step as a bend, at unchanged level. Degrees work on both sides, as with > — "1 ^3" hammers onto the third, and a bare number after ^ is that degree, not a carry factor (a carry is a decimal written before the target, "^0.7E"). Note sets and arpeggiated targets warn and hold, like slides; scoop intervals ("^-3E") don't apply to legato.
+^ is the legato connector: like >, but the pitch changes instantly — a hammer-on (upward) or pull-off (downward) — with no re-attack, the ring carrying on slightly softer. A token starting with ^ hammers the held notes onto new pitches at the slot boundary ("C ^E", "Cm - ^Fm", works across barlines); inside a token it fuses stages into one slot ("C^E" is a grace hammer at the attack, "CD^EF" works in compact runs, "Am^Gmaj" pairs chord voices low to high). Each step keeps 90% of the ringing level by default; a decimal right after ^ sets the carry — "^0.7E" keeps 70%, "^1E" keeps all of it. Carries compound along a chain ("C^D^E"). A MIDI file writes the step as an instant pitch bend at unchanged velocity; the carry is there for a player that can lower a ringing note's level. Degrees work on both sides, as with > — "1 ^3" hammers onto the third, and a bare number after ^ is that degree, not a carry factor (a carry is a decimal written before the target, "^0.7E"). Note sets and arpeggiated targets warn and hold, like slides; scoop intervals ("^-3E") don't apply to legato.
 
 ```swift
 "C ^E ^G"          // C, hammer to E, then to G — one voice
-"G E ^D E"         // pull-off D in a run, then E re-attacks
+"| G E ^D E |"     // pull-off from E to D, then E re-attacks
 ```
 
 ### Fall  C>-3  C>_
@@ -314,7 +314,7 @@ A bare > target with nothing held scoops from the last pitch the string sounded 
 "C>-3"   "C>+2"   "C>_"   "C>0.25-3"   "Am>_"   "CDE>-3"
 ```
 
-A trailing > with a signed interval makes the note fall away as it ends: the pitch ramps to the interval exactly at note-off and the release rings at the fallen pitch. >_ is the default drop (a fifth down, -5 st). An optional number before the interval is the fall length in whole notes; the default is quick (0.15 s or a quarter of the note, whichever is shorter). On a chord every voice falls in parallel; after a compact run the fall lands on the run's last note; on a tie ("C ->-3") the held note falls at that slot's end. Composes with slides ("C>E>-3") and scoops (">-3E>_"), warps with .tempo() and rescales with the duration modifiers. Playback, audio export, sampled tracks (pitch bend) and MIDI export (bend curve, center reset after note-off) all render it.
+A trailing > with a signed interval makes the note fall away as it ends: the pitch ramps to the interval exactly at note-off and the release rings at the fallen pitch. >_ is the default drop (a fifth down, -5 st). An optional number before the interval is the fall length in whole notes; the default is quick (0.15 s or a quarter of the note, whichever is shorter). On a chord every voice falls in parallel; after a compact run the fall lands on the run's last note; on a tie ("C ->-3") the held note falls at that slot's end. Composes with slides ("C>E>-3") and scoops (">-3E>_"), warps with .tempo() and rescales with the duration modifiers. A MIDI file writes it as a bend curve and recentres the bend after the note-off.
 
 ```swift
 "C>-3"             // C, dropping 3 st into the release
@@ -329,12 +329,12 @@ A trailing > with a signed interval makes the note fall away as it ends: the pit
 "Cm7 | Fm7 Bbdom7 | Ebmaj7 | R"
 ```
 
-Bars are separated by |. Each bar's tokens share it equally: one chord fills the bar, two chords get half each. Unlike inline notation, a space here is just a separator — no rest slot — so bar notation is the way to write chords back to back. A compact melody run ("CDEF", ties and > glides included) is one token: its notes subdivide the token's slot evenly, so "CDEF | G" is four quarter-bar notes then G. A { } run group does the same for anything a bar can hold — degrees, stacks, chords — and is the way to write a tuplet. An empty bar or R is a full-bar rest; use - to hold a chord for extra slots. "G7" is the pitch G octave 7 here as everywhere — the dominant chord is "Gdom7". Bar length comes from the session's .timeSignature(): beatsPerBar/noteValue of a whole note, so 4/4 (the default) = 1.0 and 3/4 = 0.75 — the same bars the player counts.
+Bars are separated by |. Each bar's tokens share it equally: one chord fills the bar, two chords get half each. Unlike inline notation, a space here is just a separator — no rest slot — so bar notation is the way to write chords back to back. A compact melody run ("CDEF", ties and > glides included) is one token: its notes subdivide the token's slot evenly, so "CDEF | G" is four quarter notes then a bar of G. A { } run group does the same for anything a bar can hold — degrees, stacks, chords — and is the way to write a tuplet. An empty bar or R is a full-bar rest; use - to hold a chord for extra slots. "G7" is the pitch G octave 7 here as everywhere — the dominant chord is "Gdom7". Bar length comes from the session's .timeSignature(): beatsPerBar/noteValue of a whole note, so 4/4 (the default) = 1.0 and 3/4 = 0.75 — the same bars a MIDI file's time signature marks.
 
 ```swift
 "Dm7 Gdom7 | Cmaj7 | ~=Am7 | [Gdom7 b9]"
 "Am - - Fmaj7 | Gmaj"    // Am 3/4 bar, Fmaj7 1/4, G the whole bar
-"CDEF Cmaj | G"          // run fills half the bar, four sixteenth-like notes
+"CDEF Cmaj | G"          // the run fills half the bar: four eighths, then the chord
 ```
 
 ## String modifiers
@@ -350,7 +350,7 @@ Bars are separated by |. Each bar's tokens share it equally: one chord fills the
 Gives every beat the same duration and re-spaces beats that sit on the default grid back to back — "CDEF".duration(.n8) is four consecutive eighths.
 
 ```swift
-"C E G C6".duration(.n8)
+"CEGC6".duration(.n8)
 ```
 
 ### .durations()
@@ -497,5 +497,5 @@ Shifts all pitches by semitones (negative = down).
 Moves bare note names (default octave 5) to the given octave.
 
 ```swift
-"C E G".octave(3)
+"CEG".octave(3)
 ```

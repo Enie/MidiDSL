@@ -140,7 +140,7 @@ Section { … }.automate(.volume, beats: [0: 0.2, 4: 1.0])
 velocities(_ velocities: UInt32...) -> Section
 ```
 
-- term `velocities`: One value per beat position, 0–127, in order. The notes of a chord share the value at their position; positions past the end of the list keep what they were written with.
+- term `velocities`: One value per beat position, 0–127, in order. The notes of a chord share the value at their position; positions past the end of the list keep what they were written with. With several layers the positions are counted layer by layer, in the order the statements are written — the first layer's positions, then the next layer's.
 
 One velocity per beat position; the notes of a chord share one value.
 
@@ -154,7 +154,7 @@ Section { "CCGG" }.velocities(110, 70, 90, 70)
 durations(_ durations: Double...) -> Section
 ```
 
-- term `durations`: One length per beat position, in whole notes. Only the ringing changes — start times stay where they are, unlike "…".durations() on a notation string, which re-spaces them.
+- term `durations`: One length per beat position, in whole notes, counted as for .velocities(). Only the ringing changes — start times stay where they are, unlike "…".durations() on a notation string, which re-spaces them.
 
 One duration per beat position; chords share one value. Does not re-space start times — unlike the string modifier "…".durations(), which does (see String Notation).
 
@@ -164,7 +164,7 @@ One duration per beat position; chords share one value. Does not re-space start 
 noteDuration(_ duration: Double) -> Section
 ```
 
-- term `duration`: One length in whole notes for every note, and the spacing too: the notes are re-laid back to back, so this changes the section's length.
+- term `duration`: One length in whole notes for every note, and the spacing too: the notes are re-laid back to back, so this changes the section's length. Every note takes its own step — the notes of a chord become a run, and the rests an unbarred string inserts between spaced tokens take a step each — so use it on a single line of single notes.
 
 Sets a uniform duration and re-spaces the notes back to back.
 
@@ -190,9 +190,9 @@ Time-warps just this section to the given BPM.
 syncopate(by amount: MusicTimeStamp = .n16) -> Section
 ```
 
-- term `by`: How far earlier to pull the notes that land squarely on a beat, in whole notes. .n16 is a sixteenth. Beat 1 and anything already off the beat are left alone.
+- term `by`: How far earlier to pull the notes that land squarely on a quarter-note beat, in whole notes. .n16 is a sixteenth. The section's very first beat and anything already off the beat are left alone; the downbeats of later bars are pulled too.
 
-Pulls notes that fall exactly on quarter-note beats (except beat 1) earlier by the given amount — an anticipation feel. Off-beat notes are untouched.
+Pulls notes that fall exactly on quarter-note beats (except the section's first) earlier by the given amount — an anticipation feel. Off-beat notes are untouched.
 
 ### .swing()
 
@@ -205,7 +205,7 @@ swing(_ ratio: Double = 0.67) -> Section
 Pushes off-beat eighth notes later. 0.5 = straight, 0.67 = jazz swing, 0.75 = heavy swing.
 
 ```swift
-Section { "C C6 A B C6 G A F" }.noteDuration(.n8).swing()
+Section { "CC6ABC6GAF" }.noteDuration(.n8).swing()
 ```
 
 ### .active()
@@ -220,7 +220,7 @@ mute(_ on: Bool = true) -> Section
 
 - term `on`: true silences the section, false un-silences it — the argument is there so the switch can be written either way. The slot stays reserved whichever it is.
 
-Silences this section — playback, MIDI out and both exporters skip its notes — while its slot stays reserved, so the sections after it keep their timing. The written notes stay as the record of what comes back when the modifier goes. On a nested Section {} layer it takes that one variant out and leaves the others.
+Silences this section — its notes are left out of playback and out of the MIDI file — while its slot stays reserved, so the sections after it keep their timing. The written notes stay as the record of what comes back when the modifier goes. On a nested Section {} layer it takes that one variant out and leaves the others.
 
 ```swift
 Section { "C E G" }.mute()

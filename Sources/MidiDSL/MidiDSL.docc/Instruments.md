@@ -8,7 +8,7 @@ A MIDI file carries no sound. It names an instrument by number and leaves the so
 
 ```swift
 Track("Bass", instrument: .generalMIDI(33)) {
-    Section { "C2 - G2 - | A2 - F2 -" }
+    Section { "| C3 - G3 - | A3 - F3 - |" }
 }
 
 Track("Drums", instrument: .drums(.room)) {
@@ -52,6 +52,7 @@ Instrument(_ name: String, program: Int? = nil, bank: Int = 0, percussion: Bool 
 
 - term `name`: What the sound is called.
 - term `program`: The General MIDI program, or nil to send none.
+- term `bank`: The bank, as for .generalMIDI(_:bank:).
 - term `percussion`: Whether the track is drums, on channel 10.
 
 The same description with a name of its own.

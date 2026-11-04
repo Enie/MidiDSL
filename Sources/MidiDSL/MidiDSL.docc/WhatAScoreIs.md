@@ -31,8 +31,8 @@ Make the property computed instead. Anything you would have written above the `S
 struct Generated: Score {
     var session: Session {
         let d = Dice(seed: 7)
-        let hats = Grid(bars: 2, subdivisions: 4) { _ in
-            d.chance(0.4) ? "x" : "."
+        let hats = Grid(bars: 2, subdivisions: 4) { step in
+            d.chance(0.4, 1, step.index) ? "x" : "."
         }
         return Session {
             Track("drums", instrument: .drums()) {

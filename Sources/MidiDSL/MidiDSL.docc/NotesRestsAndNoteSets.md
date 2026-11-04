@@ -93,7 +93,7 @@ NoteSet(_ pitches: Pitch..., duration: MusicTimeStamp = .quarter)
 One note slot that plays a different pitch on each loop pass, cycling upward through the list.
 
 ```swift
-NoteSet(.C3, .Eb3, .G3)
+NoteSet(.C3, .DSharp3, .G3)
 ```
 
 ### NoteSet
@@ -109,7 +109,7 @@ NoteSet(_ mode: NoteSetMode, _ pitches: Pitch..., duration: MusicTimeStamp = .qu
 Same, with an explicit cycling mode.
 
 ```swift
-NoteSet(.random, .C3, .Eb3, .G3, .Bb3)
+NoteSet(.random, .C3, .DSharp3, .G3, .ASharp3)
 ```
 
 ### NoteSetMode

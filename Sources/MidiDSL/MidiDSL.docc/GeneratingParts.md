@@ -4,7 +4,7 @@ Grids and phrases computed from code instead of typed.
 
 ## Overview
 
-A drum lane takes a grid string. Grid writes that string for you — it calls your closure once per step and joins the bars with | — so a part can be described by its rules ("ride on every beat, swing eighths before 2 and 4, the occasional stray triplet") instead of typed out character by character.
+A drum lane takes a grid string. Grid writes that string for you — it calls your closure once per step and joins the bars with | — so a part can be described by its rules ("ride on every beat, a swung skip note after 2 and 4, the occasional stray triplet") instead of typed out character by character.
 
 What comes back is an ordinary String. Nothing downstream knows it was generated: it goes to Lane, Kick, Snare or any other lane constructor exactly like a literal, and it expands to the same notes. Pair it with Dice(seed:) and the part becomes a function of the seed while staying every bit as fixed, exportable and reproducible as one you wrote by hand.
 
@@ -18,14 +18,14 @@ Melodies are generated the same way one level up, by Phrase and Markov — see t
 Grid(bars: Int, beats: Int = 4, subdivisions: Int = 4, _ fill: (GridStep) -> Character) -> String
 ```
 
-- term `bars`: How many bars to lay out. Match it to the session's .loopBars(…) or the tail never plays and the lane goes silent for the rest of the pass.
-- term `beats`: Beats per bar — match your time signature. 4 unless the piece says otherwise.
+- term `bars`: How many bars to lay out. When the session sets .loopBars(…), match it: a longer grid is cut off at the end of the pass, and a shorter one leaves the lane silent for the rest of it.
+- term `beats`: Beats per bar — match your time signature. 4 unless you pass another; it does not read the session's meter.
 - term `subdivisions`: Steps per beat, and so the resolution: 4 gives sixteenths, 3 the triplet eighths a swung ride actually lands on. Each bar gets beats × subdivisions characters.
 - term `fill`: Called once per step, in order, with that step's coordinates; answers the one character the step holds.
 
 Calls fill for every step of every bar, in order, and joins the bars with " | ". Each bar gets beats × subdivisions characters — with the defaults, 4 × 4 = 16 sixteenths.
 
-bars is how many bars to lay out; match it to the session's .loopBars(…) or the lane will be longer or shorter than the loop. beats is beats per bar — match your time signature. subdivisions is steps per beat, which is the resolution knob (see below). bars: 0 gives an empty string; beats and subdivisions below 1 are treated as 1.
+bars is how many bars to lay out; when the session sets .loopBars(…), match it, or the lane will be longer or shorter than the loop. beats is beats per bar — match your time signature. subdivisions is steps per beat, which is the resolution knob (see below). bars: 0 gives an empty string; beats and subdivisions below 1 are treated as 1.
 
 ```swift
 // Every downbeat, nothing else — two bars of 4 × 3
@@ -157,7 +157,7 @@ Grid(bars: 1) { s in s.isDownbeat ? "X" : (s.sub == 2 ? "x" : ".") }
 Triplet eighths — where a swung ride actually lands. Writing swing on a triplet grid puts each note where it belongs, which is more honest (and easier to reason about) than writing straight eighths and pushing them around with .swing(0.67) afterwards.
 
 ```swift
-// ride: ding on each beat, ding-DA before 2 and 4
+// ride: ding on each beat, and the skip note after 2 and 4 (ding, ding-da, ding, ding-da)
 Grid(bars: 1, subdivisions: 3) { s in
     if s.isDownbeat { return s.beat % 2 == 0 ? "X" : "x" }
     return s.sub == 2 && s.beat % 2 == 1 ? "x" : "."
@@ -209,7 +209,7 @@ let snare = Grid(bars: 8, subdivisions: 3) { s in
     if s.sub == 2 { return roll < (fill ? 0.50 : 0.22) ? "7" : "." }
     return roll < (fill ? 0.30 : 0.08) ? "4" : "."
 }
-// → "647..7..o... | o4.6.7.4o... | ..oo.o...o.. | .47.476.7..7"
+// → "447..7...... | .4.4.7.4.... | ............ | .47.474.7..7 | …"
 ```
 
 ### Pick from a set

@@ -6,7 +6,7 @@ Deterministic chance: rolls that are the same on every run.
 
 Chance comes into a piece two ways here. You can roll while *writing* it — Dice(seed:) and Grid() generate a part from a seed instead of you typing every hit — and you can leave a choice open for the *machine* to make on each pass: which note of a set, how hard, how long, whether a step sounds at all, which of several layers plays.
 
-The rolls are not noise. Each one is a pure function of where the choice is written and which pass is playing, so the same source always produces the same performance: what you hear, what the WAV renders, and what the MIDI file contains are the same music. Nothing is drawn from the clock, so a piece keeps its shape across runs, machines and exports — it varies, but it is never lost. Two choices written in different places roll independently, and a note's loudness and its length roll separately, so the loud passes aren't also the long ones.
+The rolls are not noise. Each one is a pure function of where the choice is written and which pass is playing, so the same source always produces the same performance: what a player sounds and what the MIDI file contains are the same music. Nothing is drawn from the clock, so a piece keeps its shape across runs, machines and exports — it varies, but it is never lost. Two choices written in different places roll independently, and a note's loudness and its length roll separately, so the loud passes aren't also the long ones.
 
 ## Rolling a number
 
@@ -22,7 +22,7 @@ Dice you roll while writing the piece, so a part can be generated instead of typ
 
 On top of the call itself: .chance(…) for a yes-or-no, .pick([…], …) to choose between options, .int(in: 60...72, …) for a whole number, .value([…]) when the coordinates are already an array. All four are the one roll below, shaped.
 
-Never use Double.random(in:) in a score: a score is meant to be a pure function of its source. Componium recompiles it about 0.8 s after every keystroke, so a random groove would change under your hands, and the file you export would be one you never heard.
+Never use Double.random(in:) in a score: a score is meant to be a pure function of its source. A host like Componium recompiles it about 0.8 s after every keystroke, so a random groove would change under your hands, and the file you export would be one you never heard.
 
 ```swift
 let d = Dice(seed: 7)
@@ -87,7 +87,7 @@ let d = Dice(seed: 7)
 Session { pass in
     Track("keys") {
         Section {
-            "C4 E4 G4 C5 |".transpose(d.int(in: -24...24, 1, pass))
+            "| C4 E4 G4 C5 |".transpose(d.int(in: -24...24, 1, pass))
         }
     }
 }.loops(8)
@@ -109,7 +109,7 @@ It answers an Optional only because the array might be empty; ?? a fallback and 
 ```swift
 let d = Dice(seed: 7)
 let fills = ["1 2 3 5", "5 3 2 1", "1 - 5 -"]
-Phrase(bars: 4) { s in d.pick(fills, 1, s.bar) ?? "1" }
+Phrase(bars: 4, beats: 1) { s in d.pick(fills, 3, s.bar) ?? "1" }   // one fill per bar
 ```
 
 ### .value()
@@ -136,8 +136,8 @@ d.value(address)    //  ==  d(1, bar, step)
 Grid(bars: Int, beats: Int = 4, subdivisions: Int = 4, _ fill: (GridStep) -> Character) -> String
 ```
 
-- term `bars`: How many bars to lay out. Match it to the session's .loopBars(…) or the tail never plays and the lane goes silent for the rest of the pass.
-- term `beats`: Beats per bar — match your time signature. 4 unless the piece says otherwise.
+- term `bars`: How many bars to lay out. When the session sets .loopBars(…), match it: a longer grid is cut off at the end of the pass, and a shorter one leaves the lane silent for the rest of it.
+- term `beats`: Beats per bar — match your time signature. 4 unless you pass another; it does not read the session's meter.
 - term `subdivisions`: Steps per beat, and so the resolution: 4 gives sixteenths, 3 the triplet eighths a swung ride actually lands on. Each bar gets beats × subdivisions characters.
 - term `fill`: Called once per step, in order, with that step's coordinates; answers the one character the step holds.
 
@@ -182,13 +182,13 @@ Section {
 ### Markov()
 
 ```swift
-Markov(from: String, order: Int = 1) / Markov([Int: [Int]], start: Int?, slots: Int)
+Markov(from: String, order: Int = 1) / Markov([Int: [Int]], start: Int? = nil, slots: Int = 4)
 ```
 
 - term `from`: The phrase to learn from, written as ordinary notation. Its tokens are the only ones the chain can write, its counts are the weights, and its | set the bar length and the openings.
 - term `order`: How many tokens of history a choice looks at, 1–4. 1 wanders, 2 keeps the source's turns of phrase, 3 nearly quotes it.
 - term `start`: Chart form only: the state every melody opens on. Left out, the seed picks among all the states you named.
-- term `slots`: Chart form only: notes per bar, since a chart has no bars in it. The phrase form reads this off the | instead.
+- term `slots`: Chart form only: notes per bar, since a chart has no bars in it — 4 unless given. The phrase form reads this off the | instead.
 
 A melody generator you hand a phrase you already like. It is a chain over notation tokens, not over pitches — a tie after a 3 is a transition like any other, so what it learns is the source's rhythm and articulation as much as its shape.
 
@@ -244,7 +244,7 @@ print(Markov(from: "1 2 1 2 | 1 2 1 3").chart)
 ### ?( … )
 
 ```swift
-"C ?(E G B) C"
+"| C ?(E G B) C |"
 ```
 
 A note set in notation: one of the listed members sounds each pass, drawn by dice. ~ walks the set up instead, ~~ down, ~* back and forth — the dice are the unpredictable member of that family.
@@ -252,9 +252,9 @@ A note set in notation: one of the listed members sounds each pass, drawn by dic
 A member can be a **chord** as well as a single note — a chord on a degree ("6m", "5dom7"), a named chord ("Cmaj7") or a stack ("[1 3 5]") — so a set is how you write a harmony that changes from pass to pass. Every mode works the same on chords as on pitches, so an unprefixed set walks the chords in order and "?" draws one. Ties, rests and slides are not members: a set is a choice between things that sound.
 
 ```swift
-Section { "C ?(E G B) C" }              // one note, three readings
-Section { "?(1maj 6m) - ?(4maj 2m) -" } // one bar, four harmonies
-Section { "([1 3 5] [4 6 1'])" }        // alternating, pass by pass
+Section { "| C ?(E G B) C |" }              // one note, three readings
+Section { "| ?(1maj 6m) - ?(4maj 2m) - |" } // one bar, two chords, each drawn per pass
+Section { "| ([1 3 5] [4 6 1']) |" }        // the two stacks take turns, pass by pass
 ```
 
 ## How hard
@@ -265,12 +265,12 @@ Section { "([1 3 5] [4 6 1'])" }        // alternating, pass by pass
 velocity(random: ClosedRange<UInt32>) -> Section
 ```
 
-- term `random`: The range each note draws its velocity from, 0–127, re-rolled every pass. The written velocity becomes the middle of the range, which is what the loudness print and an audition show.
+- term `random`: The range each note draws its velocity from, 0–127, re-rolled every pass. The written velocity becomes the middle of the range — the one value a reader that does not roll (a drawing of the part, say) sees.
 
-Every note draws its velocity from the range again on every pass, so a part breathes instead of repeating. The written velocity becomes the middle of the range, which is what the loudness print and an audition show.
+Every note draws its velocity from the range again on every pass, so a part breathes instead of repeating. The written velocity becomes the middle of the range — the one value a reader that does not roll (a drawing of the part, say) sees.
 
 ```swift
-Section { "C E G C" }.velocity(random: 70...110)
+Section { "| C E G C |" }.velocity(random: 70...110)
 ```
 
 ## How long
@@ -278,7 +278,7 @@ Section { "C E G C" }.velocity(random: 70...110)
 ### .durations(random:)
 
 ```swift
-durations(random: [Duration]) -> Section
+durations(random: [MusicTimeStamp]) -> Section
 ```
 
 - term `random`: The lengths each note may ring for, one drawn per pass. Start times never move, so the section keeps its shape however the roll goes.
@@ -286,7 +286,7 @@ durations(random: [Duration]) -> Section
 Each note picks a length from the list per pass. Start times never move — like durations(_:), this changes how long a note rings, not when the next one begins, so the section keeps its shape and the track behind it keeps its timing.
 
 ```swift
-Section { "C E G C" }.durations(random: [.n8, .n4])
+Section { "| C E G C |" }.durations(random: [.n8, .n4])
 ```
 
 ## Whether it sounds
@@ -337,9 +337,9 @@ Exactly one of the section's layers sounds per pass — a slot with several poss
 
 ```swift
 Section {
-    "C5 E5 G5"
-    "C5 F5 A5"
-    "B4 D5 G5"
+    "| C5 E5 G5 - |"
+    "| C5 F5 A5 - |"
+    "| B4 D5 G5 - |"
 }.pickOne()
 ```
 

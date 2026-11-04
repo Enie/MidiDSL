@@ -6,7 +6,7 @@ Curves over volume, filter, reverb and MIDI controllers.
 
 A score can set a level. This is how it moves one.
 
-`.automate(target, <unit>: [time: value])`, on a notation string or on a Section: a handful of breakpoints, held before the first and after the last, interpolated between. One breakpoint is a constant. An empty dictionary changes nothing. Each time may appear once — a repeated key is a Swift error at the literal, not a later value quietly winning.
+`.automate(target, <unit>: [time: value])`, on a notation string, a drum lane, a Section or a Track: a handful of breakpoints, held before the first and after the last, interpolated between. One breakpoint is a constant. An empty dictionary changes nothing. A value outside the target's range is clamped to it. Each time may appear once — a repeated key is a Swift error at the literal, not a later value quietly winning.
 
 The targets split in two, and the split decides what a curve can be. `.volume` rides each voice, so a held note genuinely fades while it rings, two layers of one section can fade differently, and two volume curves multiply — the way every other gain in this DSL does. Everything else moves something the whole *track* shares: one MIDI channel, and in a player one filter and one reverb. Those cannot be per-layer, so an inner curve wins over an outer one, and two statements sounding in the same window contest it rather than stacking.
 
@@ -54,10 +54,10 @@ Section { … }.automate(.volume, over: [0: 1.0, 1: 0.0], curve: .exponential)
 ### .cutoff / .resonance
 
 ```swift
-hertz / bandwidth
+cutoff in hertz, 20…20000 / resonance 0…2.5
 ```
 
-One filter per track, so this is not per-layer: an inner curve wins over an outer one, and two statements sounding at the same time contest it — but two *serial* parts, whether two sections or two halves of a + join, are two sweeps in two windows and both keep theirs. A MIDI file carries them as CC 74 (brightness) and CC 71 (timbre); the cutoff is mapped logarithmically across 20 Hz…20 kHz, because a sweep is heard in octaves.
+One filter per track, so this is not per-layer: an inner curve wins over an outer one, and two statements sounding at the same time contest it — but two *serial* parts, whether two sections or two halves of a + join, are two sweeps in two windows and both keep theirs. A MIDI file carries them as CC 74 (brightness) and CC 71 (timbre); the cutoff is mapped logarithmically across 20 Hz…20 kHz, because a sweep is heard in octaves, and the resonance linearly across 0…2.5.
 
 ### .reverb
 
@@ -99,7 +99,7 @@ Section { … }.automate(.volume, over: [0: 1.0, 1: 0.0], curve: .exponential)
 
 ### Why there is no spline
 
-Every shape here is monotone between two breakpoints, and that is load-bearing rather than a matter of taste. A spline through the points would overshoot between them, and a gain could pass 1.0 after the clamp.
+Every shape here is monotone between two breakpoints, and that is load-bearing rather than a matter of taste. A spline through the points would overshoot between them, so the curve would pass values you never wrote — a gain above 1.0, a cutoff beyond the band you chose.
 
 ## Waves
 
@@ -112,9 +112,9 @@ Wave.sine / .triangle / .sawtooth / .square / .random
 Ready-made breakpoints for .automate(...) — a tremolo, a filter wobble, a sample-and-hold. A wave *is* the [time: value] dictionary you would otherwise have typed, so it needs no special .automate overload and every unit label works: over: wants times in 0…1, bars: in bars, beats: in beats, which is what span is for.
 
 ```swift
-".automate(.volume, over: Wave.sine(cycles: 8, between: 0.6...1.0))
-.automate(.cutoff, bars: Wave.triangle(cycles: 2, span: 8, between: 400...6000))
-.automate(.cutoff, over: Wave.random(steps: 16, between: 400...8000, seed: 7))"
+"| 1 3 5 5 |".automate(.volume, over: Wave.sine(cycles: 8, between: 0.6...1.0))
+Section { … }.automate(.cutoff, bars: Wave.triangle(cycles: 2, span: 8, between: 400...6000))
+Section { … }.automate(.cutoff, over: Wave.random(steps: 16, between: 400...8000, seed: 7))
 ```
 
 ### Wave.sine()

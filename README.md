@@ -71,8 +71,8 @@ let bytes = MIDIFile.data(for: session, loops: 4)
 ```
 
 The file is format 1 at 480 ticks per quarter: a conductor track with the tempo
-and meter, then one named track per `Track`, each on its own channel (skipping
-channel 10, the General MIDI drum channel). Every pass is written the way it plays: note sets and dice
+and meter, then one named track per `Track`: a drum track on channel 10, the General MIDI
+drum channel, and the others on the remaining channels in order. Every pass is written the way it plays: note sets and dice
 resolved, `.active(...)` gates and shuffled sections applied, mutes and volumes
 honoured. Slides become pitch-bend curves and a `.volume` curve becomes
 expression (CC 11). By default it writes the session's whole form
@@ -120,7 +120,7 @@ Add the package to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Enie/MidiDSL.git", from: "0.2.0"),
+    .package(url: "https://github.com/Enie/MidiDSL.git", .upToNextMinor(from: "0.3.0")),
 ],
 targets: [
     .target(name: "MyTarget", dependencies: [
@@ -132,7 +132,8 @@ targets: [
 or in Xcode, File ▸ Add Package Dependencies… with the same URL.
 
 It needs Swift 6 tools and macOS 13 or later, and builds in Swift 5 language
-mode. Until 1.0, a minor version may change the API.
+mode. Until 1.0, a minor version may change the API, which is why the
+requirement above stops at the next one.
 
 ## Tests
 

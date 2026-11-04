@@ -14,7 +14,7 @@ The root container. Holds tracks plus global settings — tempo, master volume, 
 Session { Track... }
 ```
 
-Builds a session from one or more Track blocks.
+Builds a session from one or more Track blocks. Written as `Session { pass in … }` the body is read once per pass, so a track can change from one time through to the next — see <doc:TracksAndArrangement>.
 
 ## Modifiers
 
@@ -58,10 +58,10 @@ Loop length in bars. Without it the loop length is derived from the longest trac
 timeSignature(_ beatsPerBar: Int, _ noteValue: Int) -> Session
 ```
 
-- term `beatsPerBar`: The top number: how many beats a bar counts. Match it to the beats: you pass Grid and Phrase, or their bars won't be the song's bars.
+- term `beatsPerBar`: The top number: how many beats a bar counts. Pass the same beats: to Grid and Phrase, or their bars won't be the song's bars.
 - term `noteValue`: The bottom number: which note gets the beat. 4 is a quarter, 8 an eighth. Together they set the bar's length — 3/4 and 6/8 are both 0.75 of a whole note, 5/4 is 1.25.
 
-Meter by numbers, e.g. timeSignature(3, 4) for a waltz. Bar notation ("… | …") follows it: each bar spans beatsPerBar/noteValue of a whole note (3/4 and 6/8 → 0.75, 5/4 → 1.25), matching the player's bar grid. Inline notation is unaffected.
+Meter by numbers, e.g. timeSignature(3, 4) for a waltz. Bar notation ("… | …") follows it: each bar spans beatsPerBar/noteValue of a whole note (3/4 and 6/8 → 0.75, 5/4 → 1.25), the same bars the MIDI file's time signature marks. Inline notation is unaffected.
 
 ### .timeSignature()
 
@@ -76,6 +76,10 @@ Meter from a preset.
 ```swift
 Session { … }.timeSignature(.sixEight)
 ```
+
+### More on a session
+
+`.loops(_:)` sets how many passes the form runs — see <doc:TracksAndArrangement>. `.key(_:_:)` names the key degrees are read in — see <doc:ProgressionsAndScales>. `.seed(_:)` picks another set of dice rolls — see <doc:DiceAndChance>.
 
 ## TimeSignature presets
 

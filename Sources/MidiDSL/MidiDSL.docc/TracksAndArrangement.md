@@ -151,7 +151,7 @@ mute(_ on: Bool = true) -> Track
 
 - term `on`: true silences the track, false un-silences it. The argument exists so the switch can be written either way; .mute() alone means true.
 
-Silences the track — playback, MIDI out and both exporters skip its notes. The track keeps its place in the session, so MIDI channels and the section shuffle stay aligned.
+Silences the track — its notes are left out of playback and out of the MIDI file. The track keeps its place in the session, so MIDI channels and the section shuffle stay aligned.
 
 ```swift
 Track(name: "pad") { … }.mute()
@@ -169,7 +169,7 @@ Loop(bars: Int, times: Int? = nil, body: (Int) -> [Section])
 - term `times`: How many times round. Leave it out and the loop runs as long as the piece — measured against whatever is written out, so adding a phrase to the melody lengthens the groove under it with nothing to re-count.
 - term `body`: The sections for one time round, handed the 0-based round number. It is an ordinary Swift closure, so `if loop == 0`, `if loop % 4 == 3` and `for v in 0..<loop` all work — written as a trailing closure: Loop(bars: 2) { loop in … }. Name it `loop` rather than `pass`: a pass is the whole piece going round, which is a different number and has a variable of its own — see The form.
 
-Repetition, written where it happens. A Loop holds sections and lays them down again and again on a grid of its own, so a groove can repeat under a voice that does not — the thing a Session's one loop could never say. Each loop in a piece can have its own length. Anything written outside a Loop plays once, straight through. The dice keep rolling: every time round is salted separately, so a ?() set, a ? step and a rolled velocity all vary from round to round exactly as they used to vary from pass to pass.
+Repetition, written where it happens. A Loop holds sections and lays them down again and again on a grid of its own, so a groove can repeat under a voice that does not — the thing a Session's one loop could never say. Each loop in a piece can have its own length. Anything written outside a Loop plays once, straight through. The dice keep rolling: every time round is salted separately, so a ?() set, a ? step and a rolled velocity all vary from round to round, the way they vary from pass to pass.
 
 ```swift
 Track(name: "drums") {
@@ -189,7 +189,7 @@ Track(name: "voice") {           // no Loop: written once, straight through
 
 ### Reacting to the time round
 
-The body is a plain Swift closure, so `if loop == 0`, `if loop % 4 == 3` and `for v in 0..<loop` say what a pile of nested variant sections used to. A round that builds nothing is silent and still keeps its bars, which is how a part drops out for eight bars without anything under it moving. The number is the loop's own round — for the pass the whole piece is on, see The form.
+The body is a plain Swift closure, so `if loop == 0`, `if loop % 4 == 3` and `for v in 0..<loop` choose what each round plays. A round that builds nothing is silent and still keeps its bars, which is how a part drops out for eight bars without anything under it moving. The number is the loop's own round — for the pass the whole piece is on, see The form.
 
 ```swift
 Loop(bars: 1, times: 8) { loop in
@@ -206,9 +206,9 @@ Loop(bars: 1, times: 8) { loop in
 Session { pass in … }.loops(_ count: Int)
 ```
 
-- term `count`: How many times through the piece — the form's length, and what the toolbar prints as PASS 2/4. It is also how many times a pass body is read. Leave .loops(…) off and the form is whatever the arrangement itself declares, which is one pass for a score that arranges nothing.
+- term `count`: How many times through the piece — the form's length. It is also how many times a pass body is read. Leave .loops(…) off and the form is whatever the arrangement itself declares, which is one pass for a score that arranges nothing.
 
-The session body can be handed the pass — which time through the whole piece is playing, 0-based — so `if pass >= 2` says what a stack of gated variant sections used to. A Loop's number counts rounds inside one track; this one counts times through everything. The piece cycles through the passes it was built for: the player takes the pass modulo the form's length, so a four-pass body plays round and round rather than running out. Every pass is built at once and gated to its own, which is what a nested variant Section {} does by hand — so a track's sound (its instrument, its volume, its section order) belongs to the track and not to the pass, and sections are aligned position by position. Vary the material between passes and write the sound once; where two passes disagree about either, the score reports it when it runs.
+The session body can be handed the pass — which time through the whole piece is playing, 0-based — so `if pass >= 2` can change what plays from the third time through. A Loop's number counts rounds inside one track; this one counts times through everything. The piece cycles through the passes it was built for: the player takes the pass modulo the form's length, so a four-pass body plays round and round rather than running out. Every pass is built at once and gated to its own, which is what a nested variant Section {} does by hand — so a track's sound (its instrument, its volume, its section order) belongs to the track and not to the pass, and sections are aligned position by position. Vary the material between passes and write the sound once; where two passes disagree about either, the score reports it when it runs.
 
 ```swift
 return Session { pass in
@@ -293,7 +293,7 @@ active(every n: Int, offset: Int = 0)
 Play every nth pass; offset shifts the phase. active(every: 2, offset: 1) = odd passes.
 
 ```swift
-Section { "[Cm7]~=" }.active(every: 4)
+Section { "| Cm7~= - - - |" }.active(every: 4)
 ```
 
 ### .shuffleSections()
@@ -323,8 +323,8 @@ A Section nested inside a Section {} block is a layer like any other — and wit
 ```swift
 Track(name: "guitar") {
     Section {
-        Section { "D3A3E4F#4 C#5 - A4" }.active(loops: [0, 1])
-        Section { "[Dmaj7 9]~0.05 - - -" }.active(loops: 2...)
+        Section { "| D3 A3 E4 F#4 | C#5 - A4 - |" }.active(loops: [0, 1])
+        Section { "| [Dmaj7 9]~0.05 - - - |" }.active(loops: 2...)
     }
 }
 ```
