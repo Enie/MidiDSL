@@ -4,7 +4,7 @@ One instrument's part, and when it plays across the passes.
 
 ## Overview
 
-One track = one synthesizer voice. Sections inside a track play back to back. The .active() family controls on which loop passes a track (or a single section) actually sounds — passes are 0-based, and an inactive pass leaves silence, so the rest of the timing is unchanged.
+One track = one instrument, on one MIDI channel. Sections inside a track play back to back. The .active() family controls on which loop passes a track (or a single section) actually sounds — passes are 0-based, and an inactive pass leaves silence, so the rest of the timing is unchanged.
 
 ## Creating
 
@@ -14,9 +14,9 @@ One track = one synthesizer voice. Sections inside a track play back to back. Th
 Track(_ name: String) { Section... }
 ```
 
-- term `name`: What the track is called. It names its MIDI-out port, its channel in an exported MIDI file, so keep it distinct — renaming one makes the DAW see a new port. `name:` may be written out; every other constructor here takes its first argument unlabelled, so this one does too.
+- term `name`: What the track is called. It names the track in an exported MIDI file, so keep it distinct. `name:` may be written out; every other constructor here takes its first argument unlabelled, so this one does too.
 
-A track on the default synth.
+A track with no instrument named: a player picks its default sound, and a MIDI file sends no program change.
 
 ```swift
 Track("melody") { … }
@@ -85,7 +85,7 @@ Time-warps this track's sections relative to the session tempo.
 automate(_ target: AutomationTarget, over breakpoints: [Double: Double], curve: AutomationShape = .linear) -> Track
 ```
 
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares: one filter, one reverb node, one MIDI channel. Sampled and hosted tracks have no filter of ours, so .cutoff and .resonance reach them as CC 74 and CC 71; .cc(n) makes no sound in Componium at all and exists for the DAW to learn. .effect("Name", parameter: "Mix") moves a parameter of a plugin in the track's effect chain, 0…1 across its range.
+- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
 - term `over`: time: value, with the time as a fraction of the whole track — 0 is the top of the pass, 1 where its last section ends. So the curve spans the sections instead of restarting inside each one, which is the difference between this level and the same modifier on a Section.
 - term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
 
@@ -101,7 +101,7 @@ Track("pad") { … }.automate(.volume, over: [0: 0, 0.25: 1, 1: 0])
 automate(_ target: AutomationTarget, at breakpoints: [Double: Double], curve: AutomationShape = .linear) -> Track
 ```
 
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares: one filter, one reverb node, one MIDI channel. Sampled and hosted tracks have no filter of ours, so .cutoff and .resonance reach them as CC 74 and CC 71; .cc(n) makes no sound in Componium at all and exists for the DAW to learn. .effect("Name", parameter: "Mix") moves a parameter of a plugin in the track's effect chain, 0…1 across its range.
+- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
 - term `at`: time: value, with the time in whole notes from the top of the track — the DSL's own unit, so .n4 and .n2 work as keys. Otherwise exactly as over:.
 - term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
 
@@ -117,7 +117,7 @@ Track("bass") { … }.automate(.volume, at: [0: 0.2, .n1: 1.0])
 automate(_ target: AutomationTarget, bars breakpoints: [Double: Double], curve: AutomationShape = .linear) -> Track
 ```
 
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares: one filter, one reverb node, one MIDI channel. Sampled and hosted tracks have no filter of ours, so .cutoff and .resonance reach them as CC 74 and CC 71; .cc(n) makes no sound in Componium at all and exists for the DAW to learn. .effect("Name", parameter: "Mix") moves a parameter of a plugin in the track's effect chain, 0…1 across its range.
+- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
 - term `bars`: time: value, with the time as a bar number counted from the top of the track — which at this level is the top of the piece, so a bar number here is the bar number you count. Read under the session's meter.
 - term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
 
@@ -133,7 +133,7 @@ Track("bass") { … }.automate(.cutoff, bars: [0: 300, 8: 5000])
 automate(_ target: AutomationTarget, beats breakpoints: [Double: Double], curve: AutomationShape = .linear) -> Track
 ```
 
-- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares: one filter, one reverb node, one MIDI channel. Sampled and hosted tracks have no filter of ours, so .cutoff and .resonance reach them as CC 74 and CC 71; .cc(n) makes no sound in Componium at all and exists for the DAW to learn. .effect("Name", parameter: "Mix") moves a parameter of a plugin in the track's effect chain, 0…1 across its range.
+- term `target`: What moves. .volume is a gain, 0…1, and rides each voice — so a held note fades while it rings and two layers of one section can fade differently. .cutoff (Hz), .resonance, .reverb (0…1) and .cc(n) move something the whole track shares — one MIDI channel — and a MIDI file carries them as CC 74, CC 71, CC 91 and CC n.
 - term `beats`: time: value, with the time as a beat counted from the top of the track. Agrees with bars: by construction — four beats of 4/4 are one bar.
 - term `curve`: How the value gets from one breakpoint to the next. .linear (the default) is a straight line; .exponential is the shape a decay has and is usually what a volume fade wants, since gain is linear but hearing is not — a straight line drops fast and then lingers; .smooth eases in and out so there is no corner where segments meet; .hold does not ramp at all, holding each value until the next breakpoint and then jumping. The shape is spent when it is written: it becomes breakpoints, so everything downstream reads one piecewise-linear curve.
 

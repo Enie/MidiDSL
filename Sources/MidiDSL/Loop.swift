@@ -115,7 +115,7 @@ public struct Loop {
                         + "A Loop body is serial, like a track's: layers go inside one Section { }.",
                     line: first?.sourceLine ?? line,
                     column: first?.sourceColumn ?? column,
-                    file: first?.sourceFile ?? SectionBuilder.foreignFile(file)))
+                    file: first?.sourceFile ?? SourceFiles.stamp(file)))
             }
 
             if laid < span - 1e-9 {
@@ -129,7 +129,7 @@ public struct Loop {
         var marker = Note(pitch: nil, velocity: 0, startTime: max(0, end), duration: 0)
         marker.sourceLine = line
         marker.sourceColumn = column
-        marker.sourceFile = SectionBuilder.foreignFile(file)
+        marker.sourceFile = SourceFiles.stamp(file)
         marker.loop = stamp
         return marker
     }
@@ -230,7 +230,7 @@ enum PassExpansion {
                     + "the pass, so pass \(firstPass)'s is what plays. Vary the material "
                     + "between passes, and write the track once.",
                 line: line, column: column,
-                file: SectionBuilder.foreignFile(file)))
+                file: SourceFiles.stamp(file)))
         }
 
         func merged(line: Int, column: Int, file: String) -> Track {
@@ -283,7 +283,7 @@ enum PassExpansion {
                         + "plays. Automate .volume instead, which is per-voice, or move the "
                         + "sweep outside the pass body.",
                     line: line, column: column,
-                file: SectionBuilder.foreignFile(file)))
+                file: SourceFiles.stamp(file)))
             }
         }
     }
@@ -313,7 +313,7 @@ enum PassExpansion {
                     + "end on every pass. Keep each pass's sections the same length and vary "
                     + "what is inside them.",
                 line: line, column: column,
-                file: SectionBuilder.foreignFile(file)))
+                file: SourceFiles.stamp(file)))
         }
     }
 

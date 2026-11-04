@@ -26,6 +26,11 @@ enum ScoreRunner {
             }
         }
 
+        if let list = path(after: "--sources-elsewhere", in: arguments) {
+            SourceFiles.elsewhere = list.split(separator: ",").map(String.init)
+        }
+        SourceFiles.here = path(after: "--source-here", in: arguments)
+
         let session = build()
         let jsonPath = path(after: "--session-json", in: arguments)
 

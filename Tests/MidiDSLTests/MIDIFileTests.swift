@@ -85,6 +85,66 @@ final class MIDIFileStructureTests: XCTestCase {
         XCTAssertFalse(events.contains { if case .programChange = $0.kind { true } else { false } })
     }
 
+    // MARK: - Track-wide curves as controllers
+
+    private func controllers(_ events: [MIDIFile.TrackEvent], _ number: UInt8) -> [(tick: Int, value: UInt8)] {
+        events.compactMap {
+            if case .controller(number, let value) = $0.kind { return ($0.tick, value) }
+            return nil
+        }
+    }
+
+    func testACutoffSweepIsWrittenAsBrightnessAcrossItsSection() {
+        let track = Track("keys") {
+            Section { "| C - - - |" }
+            Section { "| E - - - |" }.automate(.cutoff, over: [0: 20, 1: 20000])
+        }
+        let sweep = controllers(MIDIFile.trackEvents(for: track, loops: 1, loopTicks: 3840, tempo: 120), 74)
+        XCTAssertEqual(sweep.first?.tick, 1920, "from the second section's start")
+        XCTAssertEqual(sweep.first?.value, 0)
+        XCTAssertEqual(sweep.last?.value, 127)
+        XCTAssertTrue(sweep.allSatisfy { $0.tick < 3840 }, "held inside the loop")
+        XCTAssertEqual(sweep.map(\.value), sweep.map(\.value).sorted(), "rising")
+        XCTAssertEqual(Set(sweep.map(\.value)).count, sweep.count, "only changes are written")
+    }
+
+    func testResonanceReverbAndARawControllerHaveTheirNumbers() {
+        let track = Track("keys") {
+            Section { "| C - - - |" }
+                .automate(.resonance, over: [0: 2.5])
+                .automate(.reverb, over: [0: 0.5])
+                .automate(.cc(1), over: [0: 1])
+        }
+        let events = MIDIFile.trackEvents(for: track, loops: 1, loopTicks: 1920, tempo: 120)
+        XCTAssertEqual(controllers(events, 71).first?.value, 127)
+        XCTAssertEqual(controllers(events, 91).first?.value, 64)
+        XCTAssertEqual(controllers(events, 1).first?.value, 127)
+    }
+
+    func testAHostParameterIsLeftOut() {
+        let track = Track("keys") {
+            Section { "| C - - - |" }.automate(.host("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
+        }
+        let events = MIDIFile.trackEvents(for: track, loops: 1, loopTicks: 1920, tempo: 120)
+        XCTAssertFalse(events.contains { if case .controller = $0.kind { true } else { false } })
+    }
+
+    func testACurveFollowsItsSectionsGateAcrossPasses() {
+        let track = Track("keys") {
+            Section { "| C - - - |" }.automate(.cc(20), over: [0: 1]).active(loops: [1])
+        }
+        let lane = controllers(MIDIFile.trackEvents(for: track, loops: 2, loopTicks: 1920, tempo: 120), 20)
+        XCTAssertEqual(lane.map(\.tick), [1920], "silent on pass 0, written on pass 1")
+    }
+
+    func testTheCutoffIsMappedInOctaves() {
+        XCTAssertEqual(AutomationTarget.cutoff.midiValue(20), 0)
+        XCTAssertEqual(AutomationTarget.cutoff.midiValue(20000), 127)
+        XCTAssertEqual(AutomationTarget.cutoff.midiValue(633), 64, "the geometric middle of 20 Hz…20 kHz")
+        XCTAssertEqual(AutomationTarget.resonance.midiValue(1.25), 64)
+        XCTAssertNil(AutomationTarget.volume.midiController)
+    }
+
     func testDrumsGoOnChannelTenAndTheOthersCloseAroundThem() {
         let parts = chunks(MIDIFile.data(for: Session {
             Track("keys") { Section { "C" } }

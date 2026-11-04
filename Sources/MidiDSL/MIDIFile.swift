@@ -10,8 +10,9 @@ import Foundation
 ///
 /// Every pass is resolved the way a player hears it: note sets, dice, `.active(...)` gates,
 /// shuffled sections, mutes, track and session volume. Slides become pitch-bend curves (a
-/// note whose bend would clash with another on the channel is re-attacked instead), and a
-/// `.volume` curve becomes CC 11.
+/// note whose bend would clash with another on the channel is re-attacked instead), a
+/// `.volume` curve becomes CC 11, and the track-wide curves their controllers: `.cutoff` CC 74,
+/// `.resonance` CC 71, `.reverb` CC 91, `.cc(n)` CC n.
 ///
 /// ```swift
 /// try MIDIFile.write(session, to: URL(fileURLWithPath: "piece.mid"))
@@ -20,6 +21,10 @@ public enum MIDIFile {
 
     @_documentation(visibility: internal)
     public static let ticksPerQuarter = 480
+    private static let ticksPerWholeNote = 4 * ticksPerQuarter
+    /// How finely a controller curve is stepped: a 96th of a whole note, about 20 ms at 120 bpm.
+    /// Only the steps where the value changes are written.
+    private static let controllerStepTicks = 20
 
     /// Writes the file. `loops` is how many passes to write; nil writes the session's form
     /// (`Session.effectiveLoopCount`).
@@ -378,10 +383,60 @@ public enum MIDIFile {
             }
         }
 
+        for (controller, steps) in controllerLanes(for: track, loops: loops, loopTicks: loopTicks) {
+            var lastValue = -1
+            for step in steps where Int(step.value) != lastValue {
+                emit(step.tick, 3, .controller(number: controller, value: step.value))
+                lastValue = Int(step.value)
+            }
+        }
+
         pending.sort {
             ($0.tick, $0.priority, $0.seq) < ($1.tick, $1.priority, $1.seq)
         }
         return pending.map { TrackEvent(tick: $0.tick, kind: $0.kind) }
+    }
+
+    /// The track-wide curves a file can carry (cutoff, resonance, reverb, `.cc`), as controller
+    /// values in tick order, one lane per controller. A section's curve counts from the section's
+    /// start, wherever this pass's section order puts it, and is gated as its notes are.
+    private static func controllerLanes(for track: Track, loops: Int,
+                                        loopTicks: Int) -> [(UInt8, [(tick: Int, value: UInt8)])] {
+        let windows = SectionShuffle.windows(of: track.sections)
+        var lanes: [UInt8: [(tick: Int, value: UInt8)]] = [:]
+        var order: [UInt8] = []
+        for loopIndex in 0..<loops {
+            if let activity = track.activity, !activity.isActive(loopIndex: loopIndex) { continue }
+            let loopOffset = loopIndex * loopTicks
+            let starts = SectionShuffle.isShuffled(track, loopIndex: loopIndex)
+                ? SectionShuffle.shuffledStarts(windows: windows, loopIndex: loopIndex) : []
+            for (sectionIndex, section) in track.sections.enumerated() {
+                guard let curves = section.automation, !curves.isEmpty, !section.isMuted else { continue }
+                if let activity = section.activity, !activity.isActive(loopIndex: loopIndex) { continue }
+                let start = starts.isEmpty ? windows[sectionIndex].start : starts[sectionIndex]
+                for curve in curves {
+                    guard let controller = curve.target.midiController,
+                          let first = curve.points.first, let last = curve.points.last else { continue }
+                    if lanes[controller] == nil { order.append(controller) }
+                    let firstTick = ticks(start + first.time), lastTick = ticks(start + last.time)
+                    var tick = firstTick
+                    while true {
+                        let at = Double(tick - firstTick) / Double(ticksPerWholeNote) + first.time
+                        var absolute = loopOffset + tick
+                        if loopTicks > 0 { absolute = min(absolute, loopOffset + loopTicks - 1) }
+                        lanes[controller, default: []].append(
+                            (absolute, curve.target.midiValue(curve.value(at: min(at, last.time)))))
+                        if tick >= lastTick { break }
+                        tick = min(tick + controllerStepTicks, lastTick)
+                    }
+                }
+            }
+        }
+        return order.map { controller in
+            (controller, (lanes[controller] ?? []).enumerated()
+                .sorted { ($0.element.tick, $0.offset) < ($1.element.tick, $1.offset) }
+                .map(\.element))
+        }
     }
 
     private static func reattackSegments(_ occ: NoteOccurrence,

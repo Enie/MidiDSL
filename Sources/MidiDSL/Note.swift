@@ -141,7 +141,7 @@ public struct Fall: Equatable, Hashable, Codable {
 }
 
 /// What an automation curve moves: volume, filter cutoff and resonance, reverb, a MIDI controller,
-/// or a parameter of an effect plugin.
+/// or a parameter of something the host runs on the track.
 ///
 /// See <doc:Automation>.
 public enum AutomationTarget: Equatable, Hashable, Codable {
@@ -150,10 +150,10 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     case resonance
     case reverb
     case cc(Int)
-    /// A parameter of an effect plugin the host runs on the track, named by the
-    /// effect as it is written there and by the parameter's display name. The value is 0…1 across
-    /// the parameter's own range, whatever unit the plugin keeps it in.
-    case effect(String, parameter: String)
+    /// A parameter of something the host runs on the track, such as an effect plugin: named by
+    /// the thing as the host's score writes it, and by the parameter's display name. The value is
+    /// 0…1 across the parameter's own range. A MIDI file has no word for it and leaves it out.
+    case host(String, parameter: String)
 
     @_documentation(visibility: internal)
     public static let fixed: [AutomationTarget] = [.volume, .cutoff, .resonance, .reverb]
@@ -167,10 +167,41 @@ public enum AutomationTarget: Equatable, Hashable, Codable {
     @_documentation(visibility: internal)
     public var valueRange: ClosedRange<Double> {
         switch self {
-        case .volume, .reverb, .cc, .effect: return 0...1
+        case .volume, .reverb, .cc, .host: return 0...1
         case .cutoff: return 20...20000
         case .resonance: return 0...2.5
         }
+    }
+
+    /// The controller a MIDI file or a MIDI port carries a track-wide curve on: 74 for the
+    /// cutoff (brightness), 71 for the resonance (timbre), 91 for the reverb send, the number
+    /// itself for `.cc`. Nil for volume, which rides each voice as expression (CC 11), and for a
+    /// host parameter.
+    @_documentation(visibility: internal)
+    public var midiController: UInt8? {
+        switch self {
+        case .cutoff: return 74
+        case .resonance: return 71
+        case .reverb: return 91
+        case .cc(let number): return (0...127).contains(number) ? UInt8(number) : nil
+        case .volume, .host: return nil
+        }
+    }
+
+    /// A value of this target as a controller value, 0…127: the cutoff on a logarithmic scale
+    /// across 20 Hz…20 kHz (as the ear hears it), everything else straight across its range.
+    @_documentation(visibility: internal)
+    public func midiValue(_ value: Double) -> UInt8 {
+        let normalized: Double
+        switch self {
+        case .cutoff:
+            let low = log2(20.0), high = log2(20000.0)
+            normalized = (log2(max(20.0, min(20000.0, value))) - low) / (high - low)
+        default:
+            let range = valueRange
+            normalized = (value - range.lowerBound) / (range.upperBound - range.lowerBound)
+        }
+        return UInt8(max(0, min(127, (normalized * 127).rounded())))
     }
 }
 

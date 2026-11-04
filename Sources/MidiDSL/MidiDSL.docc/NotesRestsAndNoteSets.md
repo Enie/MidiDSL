@@ -40,7 +40,7 @@ Note(pitch: Pitch?, velocity: UInt32, duration: MusicTimeStamp)
 ```
 
 - term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
-- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way to the speakers.
+- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way out.
 - term `duration`: How long the note rings, in whole notes: 1.0 a whole note, 0.25 a quarter. It does not move what comes after it.
 
 Explicit velocity (clamped to 0–127) and duration.
@@ -52,7 +52,7 @@ Note(pitch: Pitch?, velocity: UInt32, startTime: MusicTimeStamp, duration: Music
 ```
 
 - term `pitch`: Which note sounds, as a Pitch constant (.C4, .ASharp5) or a raw MIDI number. nil is silence — a rest that still occupies its slot.
-- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way to the speakers.
+- term `velocity`: How hard the note is struck, 0–127, clamped. It is multiplied by the track's volume and the session's master volume on the way out.
 - term `startTime`: Where the note begins inside the statement, in whole notes from its start. Notes given the same startTime sound together — this is how a chord is written by hand.
 - term `duration`: How long the note rings, in whole notes: 1.0 a whole note, 0.25 a quarter. It does not move what comes after it.
 

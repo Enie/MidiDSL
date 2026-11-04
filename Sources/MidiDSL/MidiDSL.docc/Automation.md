@@ -1,6 +1,6 @@
 # Automation
 
-Curves over volume, filter, reverb, controllers and plugin parameters.
+Curves over volume, filter, reverb and MIDI controllers.
 
 ## Overview
 
@@ -8,9 +8,9 @@ A score can set a level. This is how it moves one.
 
 `.automate(target, <unit>: [time: value])`, on a notation string or on a Section: a handful of breakpoints, held before the first and after the last, interpolated between. One breakpoint is a constant. An empty dictionary changes nothing. Each time may appear once — a repeated key is a Swift error at the literal, not a later value quietly winning.
 
-The targets split in two, and the split decides what a curve can be. `.volume` rides each voice, so a held note genuinely fades while it rings, two layers of one section can fade differently, and two volume curves multiply — the way every other gain in this DSL does. Everything else moves something the whole *track* shares: one filter, one reverb node, one MIDI channel. Those cannot be per-layer, so an inner curve wins over an outer one, and two statements sounding in the same window contest it rather than stacking.
+The targets split in two, and the split decides what a curve can be. `.volume` rides each voice, so a held note genuinely fades while it rings, two layers of one section can fade differently, and two volume curves multiply — the way every other gain in this DSL does. Everything else moves something the whole *track* shares: one MIDI channel, and in a player one filter and one reverb. Those cannot be per-layer, so an inner curve wins over an outer one, and two statements sounding in the same window contest it rather than stacking.
 
-Nothing here is sampled while the music plays. A shape, a wave and a hand-written dictionary all become the same list of breakpoints when the score compiles, and that one list is what the speakers, the WAV render, the MIDI file and the DAW each read. They agree because there is only one of it.
+Nothing here is sampled while the music plays. A shape, a wave and a hand-written dictionary all become the same list of breakpoints when the score compiles, and that one list is what a MIDI file, a player and an audio render each read. They agree because there is only one of it.
 
 ## Writing a curve
 
@@ -45,7 +45,7 @@ On a notation string the order does not matter: everything a string carries is a
 gain, 0…1
 ```
 
-Rides each voice. A note held across the whole curve fades while it rings, and two statements in one section can fade differently because each note carries its own stretch of the curve. Volume curves multiply — with each other, and with the track's and session's volume. Sampled and hosted tracks get it as CC 11 (expression), stepped every 5 ms; the DAW gets the same.
+Rides each voice. A note held across the whole curve fades while it rings, and two statements in one section can fade differently because each note carries its own stretch of the curve. Volume curves multiply — with each other, and with the track's and session's volume. A MIDI file carries it as CC 11 (expression), stepped as finely as the value changes.
 
 ```swift
 Section { … }.automate(.volume, over: [0: 1.0, 1: 0.0], curve: .exponential)
@@ -57,7 +57,7 @@ Section { … }.automate(.volume, over: [0: 1.0, 1: 0.0], curve: .exponential)
 hertz / bandwidth
 ```
 
-One filter per track, so this is not per-layer: an inner curve wins over an outer one, and two statements sounding at the same time contest it — but two *serial* parts, whether two sections or two halves of a + join, are two sweeps in two windows and both keep theirs. Sampled and hosted tracks have no filter of ours, so it reaches them as CC 74 (brightness) and CC 71, mapped logarithmically because a sweep is heard in octaves.
+One filter per track, so this is not per-layer: an inner curve wins over an outer one, and two statements sounding at the same time contest it — but two *serial* parts, whether two sections or two halves of a + join, are two sweeps in two windows and both keep theirs. A MIDI file carries them as CC 74 (brightness) and CC 71 (timbre); the cutoff is mapped logarithmically across 20 Hz…20 kHz, because a sweep is heard in octaves.
 
 ### .reverb
 
@@ -65,7 +65,7 @@ One filter per track, so this is not per-layer: an inner curve wins over an oute
 wet/dry, 0…1
 ```
 
-The track's reverb node, on the synth and on sampled tracks alike. Track-wide, like the filter.
+How much of the track goes to reverb. Track-wide, like the filter; a MIDI file carries it as CC 91 (reverb send).
 
 ### .cc(n)
 
@@ -73,24 +73,15 @@ The track's reverb node, on the synth and on sampled tracks alike. Track-wide, l
 controller number, value 0…1 → 0–127
 ```
 
-A raw controller, for the DAW or a plugin to learn. It makes no sound in Componium by design — this is the channel the receiver defines. Reaches the MIDI-out ports and the exported MIDI file only.
+A raw controller, for whatever receives the file to learn: the value 0…1 is written across 0–127.
 
 ```swift
 Section { … }.automate(.cc(74), bars: [0: 0.2, 4: 1.0])
 ```
 
-### .effect
+### A host's own parameters
 
-```swift
-effect name, parameter name → value 0…1 across the parameter's range
-```
-
-A parameter of a plugin in the track's effect chain — the effect named as its .effect("…") call names it, the parameter by the name the plugin shows (case doesn't matter). The value is 0…1 across whatever range the plugin keeps, so 0.5 is halfway whether it counts in percent, decibels or seconds. Track-wide, like the filter: a curve on the track is cut into each section's window, so .hold switches a reverb in and out section by section. A stop or pause puts the preset's own value back. A name that doesn't match is reported once in the console, with what the plugin does have.
-
-```swift
-Track("Lead") { … }   // in Componium: instrument: Synth.audioUnit("Voltstring").effect("Raum")
-    .automate(.effect("Raum", parameter: "Mix"), bars: [0: 0, 8: 0.5, 16: 0], curve: .hold)
-```
+A host can automate something it runs on the track, such as a plugin's knob, with `.host(name, parameter:)`, 0…1 across the parameter's range. [Componium](https://eniestudio.de/componium) spells it `.effect("Raum", parameter: "Mix")`. A MIDI file has no word for it and leaves it out.
 
 ## Shapes
 
@@ -197,20 +188,12 @@ Wave.random(steps: Int, span: Double = 1, between band: ClosedRange<Double>, dep
 
 Sample and hold: a new level every step, held until the next.
 
-## What it reaches, and what it costs
+## In a MIDI file
 
 ### Everything agrees
 
-A fade is honoured by the synth (as a per-voice gain), by sampled and hosted tracks and the DAW (as stepped CC), by the WAV render and by the exported MIDI file. They read one list of breakpoints, which is why they cannot drift apart.
+A fade is written as expression (CC 11) beside the notes it shapes, and a track-wide curve as its controller on the track's channel. A player that reads the same session reads the same list of breakpoints, which is why the file and what you hear cannot drift apart.
 
 ### Per-channel limits
 
-MIDI expression is per channel, exactly as pitch bend is. On a sampled or hosted track, overlapping notes carrying different fades share the most recent one's curve. A section-wide fade is the same curve for every note in it, so this bites far less often than the bend equivalent — but two statements in one section fading differently will hear it.
-
-### Editing costs
-
-A statement carrying a curve, or one joined with +, skips the sub-second live patch and waits out the debounced recompile — about 0.8 s. That is deliberate: the fast path re-parses one string literal in isolation and would hand the section back without its curve. Slow is a cost; wrong would be a bug.
-
-### Not the oscillator
-
-Wave's names match the synthesizer's waveforms, but none of this is the synthesizer's oscillator. That one is a wavetable read per sample on the audio thread, and band-limiting — which it needs, to stop aliasing at audio rates — would round the corners off a sub-audio gate and take away the thing a square is for.
+MIDI expression is per channel, exactly as pitch bend is. Overlapping notes carrying different fades share the most recent one's curve. A section-wide fade is the same curve for every note in it, so this bites far less often than the bend equivalent — but two statements in one section fading differently will hear it.

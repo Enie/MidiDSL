@@ -123,22 +123,19 @@ final class InstrumentTests: XCTestCase {
         XCTAssertTrue(ScoreAdvisories.collected.contains { $0.message.contains("keys run out") })
     }
 
-    func testAPartPlaysAHostStatement() {
-        let session = PartSession.of(Hit(file: "a.wav"))
-        XCTAssertEqual(session.tracks.first?.sections.first?.notes.first?.pitch, 96)
-        XCTAssertEqual(session.tracks.first?.instrument?.name, "kit+96:a.wav", "the part's track adopts its claims")
+    // MARK: - Which file a note was written in
+
+    func testByDefaultEveryFileIsTheTextsOwn() {
+        XCTAssertNil(SourceFiles.stamp("Score/Voices.swift"))
     }
 
-    private struct Pad: HostSound, Equatable {
-        static let kind = "test.pad"
-        var referencePitch: Pitch? { 72 }
-    }
-
-    func testAnInstrumentPlaysOnItsOwnAsAPart() {
-        let session = PartSession.of(Instrument.drums())
-        XCTAssertEqual(session.tracks.first?.sections.first?.notes.first?.pitch, 36, "a drum kit plays its kick")
-        XCTAssertEqual(PartSession.of(Instrument.generalMIDI(0)).tracks.first?.sections.first?.notes.first?.pitch, 60)
-        XCTAssertEqual(PartSession.of(Instrument(name: "pad", sound: Pad())).tracks.first?.sections.first?.notes.first?.pitch, 72,
-                       "a host sound names the key it is auditioned on")
+    func testAHostNamesTheFilesThatAreElsewhere() {
+        SourceFiles.elsewhere = ["Library/", "Score/"]
+        SourceFiles.here = "Score/main_"
+        defer { SourceFiles.elsewhere = []; SourceFiles.here = nil }
+        XCTAssertNil(SourceFiles.stamp("Score/main_1.swift"), "the text being read")
+        XCTAssertEqual(SourceFiles.stamp("Score/Voices.swift"), "Score/Voices.swift")
+        XCTAssertEqual(SourceFiles.stamp("Library/Kit.swift"), "Library/Kit.swift")
+        XCTAssertNil(SourceFiles.stamp("Tests/Fixture.swift"), "a file nobody named is the text's own")
     }
 }

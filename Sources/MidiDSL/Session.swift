@@ -123,7 +123,7 @@ public struct Session: Equatable, Codable, Identifiable {
                         + "pass 0. Write .loops(n) to say how long the form is; the piece still "
                         + "plays round and round, cycling through those n passes.",
                     line: line, column: column,
-                    file: SectionBuilder.foreignFile(file)))
+                    file: SourceFiles.stamp(file)))
             }
         }
         count = max(1, count)

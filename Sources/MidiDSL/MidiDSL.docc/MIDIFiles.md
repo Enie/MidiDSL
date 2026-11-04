@@ -22,7 +22,7 @@ let bytes = MIDIFile.data(for: session, loops: 4)
 The file is format 1 at 480 ticks per quarter note.
 
 - **A conductor track** carries the tempo and the time signature.
-- **One named track per `Track`**, each on its own channel in session order. Channel 10, the General MIDI drum channel, is skipped, so a drum track is written as a melodic channel and a DAW plays it as one until the track is moved to channel 10.
+- **One named track per `Track`**, opening with its instrument's program change. A drum track (`.drums(kit)`) is written on channel 10, where every General MIDI player keeps its kit; the others take channels in session order around it. See <doc:Instruments>.
 - **Time is musical.** Notes are placed in ticks, so the file holds the same notes whatever the tempo.
 
 ### Every pass as it plays
@@ -34,6 +34,7 @@ By default the file holds the session's whole form: `.loops(n)` if the session s
 - Muted tracks and sections are left out, and track and session volumes scale the velocities.
 - Slides become pitch-bend curves, with the bend range set per track to fit the widest slide, up to 24 semitones. Bend is per channel, so a sliding note that overlaps notes with a different curve falls back to re-attacked segments.
 - A `.volume` automation curve becomes expression, CC 11 (see <doc:Automation>).
+- A track-wide curve becomes its controller on the track's channel: `.cutoff` CC 74 (mapped in octaves across 20 Hz…20 kHz), `.resonance` CC 71, `.reverb` CC 91, `.cc(n)` CC n. A host's own parameter (`.host(...)`) has no MIDI word and is left out.
 
 Pass `loops:` to write a different number of passes.
 

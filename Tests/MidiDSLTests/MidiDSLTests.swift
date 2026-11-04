@@ -4281,7 +4281,7 @@ class AutomationTests: XCTestCase {
     }
 
     func testAnEffectParameterIsTrackWideAndCutIntoTheSectionsWindows() {
-        let mix = AutomationTarget.effect("Raum", parameter: "Mix")
+        let mix = AutomationTarget.host("Raum", parameter: "Mix")
         let track = Track(name: "t") {
             Section { "| 1 3 5 5 |" }
             Section { "| 5 3 2 1 |" }
@@ -4296,21 +4296,21 @@ class AutomationTests: XCTestCase {
     }
 
     func testAnEffectParameterIsHeldToTheNormalizedRange() {
-        let curve = AutomationCurve.make(.effect("Raum", parameter: "Mix"), [0: -1, 1: 40], timeScale: 1)
+        let curve = AutomationCurve.make(.host("Raum", parameter: "Mix"), [0: -1, 1: 40], timeScale: 1)
         XCTAssertEqual(curve?.points.map(\.value), [0, 1])
     }
 
     func testAnEffectParameterCrossesTheJSONBoundary() throws {
         let session = Session {
             Track(name: "t") {
-                Section { "C D E F" }.automate(.effect("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
+                Section { "C D E F" }.automate(.host("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
             }
         }
         let data = try JSONEncoder().encode(session)
         XCTAssertEqual(try JSONDecoder().decode(Session.self, from: data), session)
         XCTAssertNotEqual(session, Session {
             Track(name: "t") {
-                Section { "C D E F" }.automate(.effect("Raum", parameter: "Size"), over: [0: 0, 1: 1])
+                Section { "C D E F" }.automate(.host("Raum", parameter: "Size"), over: [0: 0, 1: 1])
             }
         }, "a different parameter is a different edit")
     }

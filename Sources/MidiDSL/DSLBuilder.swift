@@ -65,7 +65,7 @@ public enum SectionArrayBuilder {
             var n = $0
             if n.sourceLine == nil {
                 n.sourceLine = line; n.sourceColumn = column
-                n.sourceFile = SectionBuilder.foreignFile(file)
+                n.sourceFile = SourceFiles.stamp(file)
             }
             return n
         }
@@ -475,19 +475,10 @@ public enum SectionBuilder {
     private static func stamped(_ notes: [Note], line: Int, column: Int, file: String,
                                 notation: String? = nil) -> [Note] {
         let id = notation.map(NotationID.of)
-        let foreign = Self.foreignFile(file)
+        let foreign = SourceFiles.stamp(file)
         return notes.map { var n = $0; n.sourceLine = line; n.sourceColumn = column
                            n.sourceFile = foreign
                            n.notationID = id; return n }
-    }
-
-    public static let libraryModulePrefix = "ComponiumLibrary/"
-    public static let scoreModulePrefix = "Score/"
-    public static let scoreFilePrefix = "Score/userDSL_"
-    public static func foreignFile(_ file: String) -> String? {
-        if file.hasPrefix(libraryModulePrefix) { return file }
-        if file.hasPrefix(scoreModulePrefix), !file.hasPrefix(scoreFilePrefix) { return file }
-        return nil
     }
 
     private static func stampedToken(_ notes: [Note], offset: Int, length: Int) -> [Note] {

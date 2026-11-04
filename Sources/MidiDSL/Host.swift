@@ -13,15 +13,7 @@ import Foundation
 public protocol HostSound: Codable {
     /// A name for the type that stays the same across modules, written beside the sound.
     static var kind: String { get }
-    /// The key a part plays when the instrument is auditioned on its own; nil leaves it to the
-    /// instrument (the kick for drums, middle C otherwise).
-    var referencePitch: Pitch? { get }
     func isEqual(to other: any HostSound) -> Bool
-}
-
-extension HostSound {
-    @_documentation(visibility: internal)
-    public var referencePitch: Pitch? { nil }
 }
 
 extension HostSound where Self: Equatable {
@@ -128,4 +120,27 @@ public enum TrackKeys {
     }
 
     public static func reset() { claimed = [] }
+}
+
+// MARK: - Which file a note was written in
+
+/// What a note records as the file it was written in (`Note.sourceFile`), for a host that maps
+/// notes back to the text it is editing. A note written in that text records nil; one written
+/// anywhere else records its `#fileID`, so a reader holding the text can tell a line of its own
+/// from the same line number in another file.
+///
+/// By default every file is the text's own. A host names the others when it runs a score:
+/// `--sources-elsewhere <prefix>,…` are `#fileID` prefixes written somewhere else, and
+/// `--source-here <prefix>` the one inside them that is the text after all.
+@_documentation(visibility: internal)
+public enum SourceFiles {
+    nonisolated(unsafe) public static var elsewhere: [String] = []
+    nonisolated(unsafe) public static var here: String? = nil
+
+    /// The file a note written in `file` records.
+    public static func stamp(_ file: String) -> String? {
+        guard elsewhere.contains(where: { file.hasPrefix($0) }) else { return nil }
+        if let here, file.hasPrefix(here) { return nil }
+        return file
+    }
 }
