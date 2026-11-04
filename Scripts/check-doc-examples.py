@@ -21,7 +21,26 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODULES = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, ".build", "debug")
+
+
+def built_modules():
+    """The directory holding MidiDSL.swiftmodule from the last `swift build` or `swift test`.
+
+    SwiftPM's build systems put it in different places: at the top of the bin path, or in a
+    Modules folder inside it.
+    """
+    bin_path = subprocess.run(["swift", "build", "--show-bin-path"], cwd=ROOT,
+                              capture_output=True, text=True, check=True).stdout.strip()
+    for candidate in (bin_path, os.path.join(bin_path, "Modules")):
+        if os.path.exists(os.path.join(candidate, "MidiDSL.swiftmodule")):
+            return candidate
+    for directory, subdirectories, _ in os.walk(bin_path):
+        if "MidiDSL.swiftmodule" in subdirectories:
+            return directory
+    sys.exit(f"No MidiDSL.swiftmodule in {bin_path}: run `swift build` first.")
+
+
+MODULES = sys.argv[1] if len(sys.argv) > 1 else built_modules()
 
 
 def markdown_blocks(path):
