@@ -49,7 +49,7 @@ A string literal inside a `Section` is parsed as notation (see <doc:StringNotati
 swift run MyScore --midi sketch.mid
 ```
 
-This writes a Standard MIDI File that any DAW or notation program opens (see <doc:MIDIFiles>). To hear the score itself while you write it, open the `.swift` file in [Componium](https://eniestudio.de/componium), which plays it and recompiles as you type.
+This writes a Standard MIDI File that any DAW or notation program opens (see <doc:MIDIFiles>).
 
 ### A typical structure
 

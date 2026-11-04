@@ -42,7 +42,7 @@ Time is measured in whole notes: a duration of `1.0` is one whole note, four bea
 
 ### Describing, not playing
 
-MidiDSL describes music and makes no sound. Its output is a `Session`: plain data that is `Codable` and `Equatable`, for a host to play, export or draw, plus ``MIDIFile`` when a file is all you need. [Componium](https://eniestudio.de/componium), the macOS app this language was written for, is one such host. A track's ``Instrument`` says what a MIDI file can: a General MIDI program, and whether the track is drums. Sound beyond that, a synthesizer, a plugin, an effect chain, belongs to the host that makes it, and Componium adds its own for scores that import it.
+MidiDSL describes music and makes no sound. Its output is a `Session`: plain data that is `Codable` and `Equatable`, for a host to play, export or draw, plus ``MIDIFile`` when a file is all you need. A track's ``Instrument`` says what a MIDI file can: a General MIDI program, and whether the track is drums. Sound beyond that, a synthesizer, a plugin, an effect chain, belongs to the host that makes it, which can add its own for scores that import its module.
 
 ### Pure functions of their source
 

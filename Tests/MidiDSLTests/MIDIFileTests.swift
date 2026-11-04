@@ -123,7 +123,7 @@ final class MIDIFileStructureTests: XCTestCase {
 
     func testAHostParameterIsLeftOut() {
         let track = Track("keys") {
-            Section { "| C - - - |" }.automate(.host("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
+            Section { "| C - - - |" }.automate(.host("Reverb", parameter: "Mix"), over: [0: 0, 1: 1])
         }
         let events = MIDIFile.trackEvents(for: track, loops: 1, loopTicks: 1920, tempo: 120)
         XCTAssertFalse(events.contains { if case .controller = $0.kind { true } else { false } })

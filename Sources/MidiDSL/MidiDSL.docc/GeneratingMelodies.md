@@ -8,7 +8,7 @@ Grid writes a drum lane one character at a time. Phrase and Markov do the same f
 
 That is the whole design. What comes back is the same thing you would have typed between the quotes, so nothing downstream knows it was generated — .key(…) still moves it, the parser still warns about it, a MIDI file still holds it, and it sounds identical whether you generated it or wrote it out. You can print one, read it, and paste it back into the score as a literal.
 
-Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds when a host like Componium recompiles about 0.8 s after every keystroke. A melody that rerolled itself would change under your hands and export a take you never heard.
+Everything here draws from Dice, never from the clock. The same seed writes the same melody on every recompile, on every machine, and in the file you export — which matters more than it sounds when a host recompiles the score as you type. A melody that rerolled itself would change under your hands and export a take you never heard.
 
 ## Phrase: the numbers
 
@@ -298,7 +298,7 @@ How often a token appears in the source is how often it comes up, and the same g
 
 The chain's states are the literal token *texts*. So anything you write into a token becomes part of what the chain is matching on — and a token that carries a rolled number is a state that occurs exactly once.
 
-This is the trap: "~0.137Cm" and "~0.088Cm" are two unrelated states, not one chord voiced two ways. A chain built from them has nowhere to return to, every state has one successor, and it can only replay the phrase. Worse, with Double.random the token texts change on every recompile, so it is a different chain every 0.8 seconds.
+This is the trap: "~0.137Cm" and "~0.088Cm" are two unrelated states, not one chord voiced two ways. A chain built from them has nowhere to return to, every state has one successor, and it can only replay the phrase. Worse, with Double.random the token texts change on every recompile, so it is a different chain every time the score is compiled.
 
 Chain the harmony; decorate afterwards. The melody comes back as an ordinary String, so a map over its tokens can add the voicing — rolled from Dice, keyed to the slot, so it is the same on every recompile and in the file you export.
 
@@ -583,4 +583,4 @@ A written melody shows you the tune; a generated one shows you the rules that ma
 
 ### Never use Double.random(in:)
 
-Not in a score, and not to feed one of these. A host like Componium recompiles about 0.8 s after every keystroke, so a melody drawn from the system generator would change under your hands, and the file you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.
+Not in a score, and not to feed one of these. A host that recompiles as you type would run it again on every keystroke, so a melody drawn from the system generator would change under your hands, and the file you exported would be a take you never heard. Dice, the seed parameter and open: are all deterministic for exactly this reason — the whole point is that a generated part is as fixed as a written one.

@@ -2906,7 +2906,7 @@ class LegatoNotationTests: XCTestCase {
     }
 }
 
-// MARK: - Section order (Componium mode)
+// MARK: - Section order
 
 class SectionOrderTests: XCTestCase {
     private var track: Track {
@@ -4229,7 +4229,7 @@ class AutomationTests: XCTestCase {
             Track(name: "t") { Section { "C D E F" }.automate(.volume, over: [0: 0, 1: 1]) }
         }
         XCTAssertNotEqual(plain, faded,
-                          "or ContentView's alreadyCurrent check swallows the edit")
+                          "or a host comparing sessions misses the edit")
     }
 
     func testATrackParameterAloneMakesTheSessionUnequal() {
@@ -4292,7 +4292,7 @@ class AutomationTests: XCTestCase {
     }
 
     func testAnEffectParameterIsTrackWideAndCutIntoTheSectionsWindows() {
-        let mix = AutomationTarget.host("Raum", parameter: "Mix")
+        let mix = AutomationTarget.host("Reverb", parameter: "Mix")
         let track = Track(name: "t") {
             Section { "| 1 3 5 5 |" }
             Section { "| 5 3 2 1 |" }
@@ -4307,21 +4307,21 @@ class AutomationTests: XCTestCase {
     }
 
     func testAnEffectParameterIsHeldToTheNormalizedRange() {
-        let curve = AutomationCurve.make(.host("Raum", parameter: "Mix"), [0: -1, 1: 40], timeScale: 1)
+        let curve = AutomationCurve.make(.host("Reverb", parameter: "Mix"), [0: -1, 1: 40], timeScale: 1)
         XCTAssertEqual(curve?.points.map(\.value), [0, 1])
     }
 
     func testAnEffectParameterCrossesTheJSONBoundary() throws {
         let session = Session {
             Track(name: "t") {
-                Section { "C D E F" }.automate(.host("Raum", parameter: "Mix"), over: [0: 0, 1: 1])
+                Section { "C D E F" }.automate(.host("Reverb", parameter: "Mix"), over: [0: 0, 1: 1])
             }
         }
         let data = try JSONEncoder().encode(session)
         XCTAssertEqual(try JSONDecoder().decode(Session.self, from: data), session)
         XCTAssertNotEqual(session, Session {
             Track(name: "t") {
-                Section { "C D E F" }.automate(.host("Raum", parameter: "Size"), over: [0: 0, 1: 1])
+                Section { "C D E F" }.automate(.host("Reverb", parameter: "Size"), over: [0: 0, 1: 1])
             }
         }, "a different parameter is a different edit")
     }
@@ -4371,7 +4371,7 @@ class AutomationTests: XCTestCase {
         let plain = Session { Track(name: "t", sections) }
         let swept = Session { Track(name: "t", sections).automate(.cutoff, bars: [0: 400, 1: 6000]) }
         XCTAssertNotEqual(plain, swept,
-                          "or ContentView's alreadyCurrent check swallows the edit")
+                          "or a host comparing sessions misses the edit")
     }
 
     // MARK: a curve written on a drum lane

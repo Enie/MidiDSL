@@ -83,9 +83,8 @@ expression (CC 11). By default it writes the session's whole form
 MidiDSL **describes** music. It does not make sound: there is no synthesizer
 and no live MIDI output in this package. What you get is a `Session`
 (`Codable`, `Equatable`, plain data) for a host to play, export or draw, and a
-MIDI file of it if that is all you need. Componium, the macOS app this was
-written for, is one such host; the JSON above is the whole interface between
-them.
+MIDI file of it if that is all you need. The JSON above is the whole interface
+between a score and a host.
 
 It depends on Foundation and nothing else.
 

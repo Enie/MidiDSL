@@ -78,13 +78,12 @@ public struct DrumPiece: Equatable {
 /// its contextual type — `DefaultStringInterpolation`'s generic
 /// `appendInterpolation` cannot infer one, so this is the only candidate.
 ///
-/// Note what interpolating costs, which is not this extension's doing: a hole
-/// that is not a `let name = "…"` declaration is opaque to the editor's source
-/// mapping, so every token past it lights the whole statement, and LivePatcher
-/// declines an interpolated literal outright. Inside a `Grid`/`Phrase` closure
-/// or a `Markov` training string — text that is generated anyway, and already
-/// declines on both counts — it is free. In a hand-written literal,
-/// `Lane(.kick, "x... x...")` names the same piece and keeps its steps lit.
+/// Note what interpolating costs, which is not this extension's doing: the notes
+/// keep the offsets of the interpolated text, not of the literal as written, so a
+/// host that maps notes back to the source cannot place the tokens after a hole.
+/// Inside a `Grid`/`Phrase` closure or a `Markov` training string — text that is
+/// generated anyway — it costs nothing. In a hand-written literal,
+/// `Lane(.kick, "x... x...")` names the same piece and keeps its steps placed.
 public extension String.StringInterpolation {
     @_documentation(visibility: internal)
     mutating func appendInterpolation(_ piece: DrumPiece) {
