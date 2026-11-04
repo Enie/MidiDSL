@@ -389,21 +389,29 @@ public struct Section: Equatable, Codable, Identifiable {
     /// - Returns: The section, changed.
     public func tempo(_ tempo: Double) -> Section {
         guard tempo > 0 else { return self }
-        let timeWarp = SectionBuilder.tempo / tempo
+        return scalingTime(by: SectionBuilder.tempo / tempo)
+    }
+
+    /// The section with every time in it multiplied by `factor`: start times, durations, the
+    /// durations it may roll, slides, falls and curves.
+    ///
+    /// A player uses it to turn whole notes into seconds, `scalingTime(by: 240 / bpm)`.
+    @_documentation(visibility: internal)
+    public func scalingTime(by factor: Double) -> Section {
         var warped = replacingNotes(notes.map { note in
             var n = note
-            n.startTime = note.startTime * timeWarp
-            n.duration = note.duration * timeWarp
-            n.durationChoices = note.durationChoices.map { $0.map { $0 * timeWarp } }
+            n.startTime = note.startTime * factor
+            n.duration = note.duration * factor
+            n.durationChoices = note.durationChoices.map { $0.map { $0 * factor } }
             n.slides = note.slides.map { steps in
-                steps.map { SlideStep(from: $0.from, at: $0.at * timeWarp, over: $0.over * timeWarp,
+                steps.map { SlideStep(from: $0.from, at: $0.at * factor, over: $0.over * factor,
                                       carry: $0.carry, degree: $0.degree) }
             }
-            n.fall = note.fall.map { Fall(semitones: $0.semitones, over: $0.over * timeWarp) }
-            n.automation = note.automation.map { $0.map { $0.scalingTimes(by: timeWarp) } }
+            n.fall = note.fall.map { Fall(semitones: $0.semitones, over: $0.over * factor) }
+            n.automation = note.automation.map { $0.map { $0.scalingTimes(by: factor) } }
             return n
         })
-        warped.automation = automation.map { $0.map { $0.scalingTimes(by: timeWarp) } }
+        warped.automation = automation.map { $0.map { $0.scalingTimes(by: factor) } }
         return warped
     }
 

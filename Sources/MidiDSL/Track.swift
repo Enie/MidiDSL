@@ -318,6 +318,14 @@ public struct Track: Equatable, Codable, Identifiable {
         })
     }
 
+    /// The track with every time in its sections multiplied by `factor`.
+    ///
+    /// A player uses it to turn whole notes into seconds, `scalingTime(by: 240 / bpm)`.
+    @_documentation(visibility: internal)
+    public func scalingTime(by factor: Double) -> Track {
+        Track.__create(name: name, sections: sections.map { $0.scalingTime(by: factor) }, instrument: instrument, volume: volume, activity: activity, sectionOrder: sectionOrder, shuffleLoops: shuffleLoops, muted: muted)
+    }
+
     /// Silences the track.
     ///
     /// The track keeps its place in the session, so the MIDI channels of the others do not move.
