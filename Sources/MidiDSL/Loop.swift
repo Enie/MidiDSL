@@ -124,6 +124,14 @@ public struct Loop {
                     return note
                 }
                 placed.notes.append(gridMarker(at: visibleEnd - base, stamp: stamp))
+                // A round is cut off at its grid, and so is a slower stretch running past it.
+                placed.tempoSpans = section.tempoSpans.map { spans in
+                    spans.compactMap { span in
+                        let end = min(span.end, visibleEnd - base)
+                        guard span.start < end else { return nil }
+                        return TempoSpan(start: span.start, end: end, ratio: span.ratio)
+                    }
+                }
                 result.append(placed)
                 laidSections += 1
                 base = writtenEnd

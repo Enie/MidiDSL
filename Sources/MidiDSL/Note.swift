@@ -455,6 +455,11 @@ public struct Note: Equatable, Codable, Identifiable {
     @_documentation(visibility: internal)
     public var loop: LoopStamp? = nil
 
+    /// A nested section's tempo spans on their way to the section around it, which lifts them off
+    /// the note again — the way a nested section's track-wide curves travel. Never set outside a
+    /// section builder.
+    var carriedTempoSpans: [TempoSpan]? = nil
+
     @_documentation(visibility: internal)
     public var sourceLine: Int? = nil
     @_documentation(visibility: internal)

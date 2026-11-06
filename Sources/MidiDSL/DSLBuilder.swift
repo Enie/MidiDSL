@@ -788,6 +788,14 @@ public enum SectionBuilder {
 
     private static func hoistingTrackCurves(_ notes: [Note]) -> Section {
         var lanes: [AutomationCurve] = []
+        var spans: [TempoSpan] = []
+        let notes = notes.map { note -> Note in
+            guard let carried = note.carriedTempoSpans else { return note }
+            spans += carried.map { $0.shiftingTimes(by: note.startTime) }
+            var n = note
+            n.carriedTempoSpans = nil
+            return n
+        }
         let cleaned = notes.map { note -> Note in
             guard let curves = note.automation,
                   curves.contains(where: { !$0.target.isPerVoice }) else { return note }
@@ -809,6 +817,7 @@ public enum SectionBuilder {
         }
         var section = Section(notes: cleaned)
         if !lanes.isEmpty { section.automation = lanes }
+        if !spans.isEmpty { section.tempoSpans = spans }
         return section
     }
     public static func buildExpression(_ expression: Progression, line: Int = #line, column: Int = #column, file: String = #fileID) -> [Note] {
@@ -861,6 +870,12 @@ public enum SectionBuilder {
             let base = carried[carrier].startTime
             carried[carrier].automation =
                 (carried[carrier].automation ?? []) + lanes.map { $0.shiftingTimes(by: -base) }
+        }
+        if let spans = expression.tempoSpans, !spans.isEmpty,
+           let carrier = carried.indices.min(by: { carried[$0].startTime < carried[$1].startTime }) {
+            let base = carried[carrier].startTime
+            carried[carrier].carriedTempoSpans =
+                (carried[carrier].carriedTempoSpans ?? []) + spans.map { $0.shiftingTimes(by: -base) }
         }
         return carried.map { note in
             var n = note

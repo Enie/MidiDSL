@@ -72,6 +72,8 @@ Session {
 
 A section reads the session's tempo while the score is built, so build the session in a ``Score`` or with ``Session/build(_:)``. Tempo is set on sections and on the session; a track has none of its own.
 
+The notes of such a section are already placed at its speed, so a player needs nothing more to play them. A host that also keeps a beat — a tempo-synced delay in a plugin, a click — reads the speed back from ``Section/tempoSpans``: each ``TempoSpan`` says where the section runs at another speed and its ``TempoSpan/ratio`` to the session's. A nested section's span comes first and already includes the speeds around it. A MIDI file still carries one tempo: it places the section's notes further apart rather than writing a tempo change.
+
 ## Generating a section
 
 ``Section/random(from:count:duration:velocity:)-9wtbe`` writes a run of notes drawn from a set of pitches, and ``Section/random(from:count:duration:velocity:)-3a05n`` does the same from note names. The draw comes from ``Dice``, so the same set always gives the same run. Draw from a scale's ``Scale/pitches`` to stay in key:
@@ -100,3 +102,4 @@ Section {
 ## Topics
 
 - ``Section``
+- ``TempoSpan``

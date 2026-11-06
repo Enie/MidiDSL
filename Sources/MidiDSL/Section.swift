@@ -136,7 +136,8 @@ public struct Section: Equatable, Codable, Identifiable {
         guard lhs.notes.count == rhs.notes.count,
               lhs.activity == rhs.activity,
               lhs.muted == rhs.muted,
-              lhs.automation == rhs.automation else { return false }
+              lhs.automation == rhs.automation,
+              lhs.tempoSpans == rhs.tempoSpans else { return false }
         if lhs.notes.isEmpty { return true }
 
         var sameOrder = true
@@ -167,6 +168,15 @@ public struct Section: Equatable, Codable, Identifiable {
     public var muted: Bool? = nil
     @_documentation(visibility: internal)
     public var automation: [AutomationCurve]? = nil
+    /// Where the section plays at a speed of its own, and how fast.
+    ///
+    /// The notes of a section at ``tempo(_:)`` are already placed at that speed, so nothing that
+    /// plays notes needs to read this. It is for a host that also keeps a beat — a plugin's
+    /// tempo-synced delay, a click — and so has to know that a beat lasts twice as long here.
+    /// Times are the section's own, from its start, like its curves. A nested section's spans
+    /// come first, so where two cover the same time the first one is the innermost, whose
+    /// ``TempoSpan/ratio`` already includes the speeds around it.
+    public var tempoSpans: [TempoSpan]? = nil
 
     @_documentation(visibility: internal)
     public var isMuted: Bool { muted == true }
@@ -191,6 +201,7 @@ public struct Section: Equatable, Codable, Identifiable {
         section.activity = activity
         section.muted = muted
         section.automation = automation
+        section.tempoSpans = tempoSpans
         return section
     }
 
@@ -389,7 +400,13 @@ public struct Section: Equatable, Codable, Identifiable {
     /// - Returns: The section, changed.
     public func tempo(_ tempo: Double) -> Section {
         guard tempo > 0 else { return self }
-        return scalingTime(by: SectionBuilder.tempo / tempo)
+        let ratio = tempo / SectionBuilder.tempo
+        var section = scalingTime(by: 1 / ratio)
+        let inner = (section.tempoSpans ?? []).map {
+            TempoSpan(start: $0.start, end: $0.end, ratio: $0.ratio * ratio)
+        }
+        section.tempoSpans = inner + [TempoSpan(start: 0, end: section.duration, ratio: ratio)]
+        return section
     }
 
     /// The section with every time in it multiplied by `factor`: start times, durations, the
@@ -412,6 +429,7 @@ public struct Section: Equatable, Codable, Identifiable {
             return n
         })
         warped.automation = automation.map { $0.map { $0.scalingTimes(by: factor) } }
+        warped.tempoSpans = tempoSpans.map { $0.map { $0.scalingTimes(by: factor) } }
         return warped
     }
 
@@ -710,5 +728,40 @@ public struct Section: Equatable, Codable, Identifiable {
     public static func random(from noteNames: [String], count: Int, duration: Double = .n8, velocity: UInt32 = 80) -> Section {
         let pitches = noteNames.compactMap { $0.pitch }
         return random(from: pitches, count: count, duration: duration, velocity: velocity)
+    }
+}
+
+/// A stretch of a section that plays at a speed of its own, written with ``Section/tempo(_:)``.
+///
+/// ```swift
+/// Section { "| 5 3 2 1 |" }.tempo(60)   // in a session at 120: one span, 0 to 2, ratio 0.5
+/// ```
+public struct TempoSpan: Equatable, Hashable, Codable {
+    /// Where the span starts, in whole notes from the section's start.
+    public let start: MusicTimeStamp
+    /// Where it ends.
+    public let end: MusicTimeStamp
+    /// Its speed against the session's: 0.5 is half as fast, 2 twice as fast. A beat lasts
+    /// `1 / ratio` times as long as it does at the session's tempo.
+    public let ratio: Double
+
+    /// A span of the given speed.
+    ///
+    /// - Parameters:
+    ///   - start: Where it starts, in whole notes from the section's start.
+    ///   - end: Where it ends.
+    ///   - ratio: Its speed against the session's.
+    public init(start: MusicTimeStamp, end: MusicTimeStamp, ratio: Double) {
+        self.start = start
+        self.end = end
+        self.ratio = ratio
+    }
+
+    func scalingTimes(by factor: Double) -> TempoSpan {
+        TempoSpan(start: start * factor, end: end * factor, ratio: ratio)
+    }
+
+    func shiftingTimes(by offset: MusicTimeStamp) -> TempoSpan {
+        TempoSpan(start: start + offset, end: end + offset, ratio: ratio)
     }
 }
